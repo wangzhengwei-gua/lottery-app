@@ -2357,7 +2357,8 @@ function App() {
             padding: '12px',
             background: '#fff8f0',
             borderRadius: '8px',
-            border: '1px solid #ffecd2'
+            border: '1px solid #ffecd2',
+            color: '#333'
           }}>
             <div style={{fontWeight: 'bold', color: '#e67e22', marginBottom: '8px'}}>⚙️ 杀号参数配置</div>
             <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px'}}>
@@ -2431,7 +2432,8 @@ function App() {
               padding: '12px',
               background: '#f0fff4',
               borderRadius: '8px',
-              border: '1px solid #c6f6d5'
+              border: '1px solid #c6f6d5',
+              color: '#333'
             }}>
               <div style={{fontWeight: 'bold', color: '#2e7d32', marginBottom: '8px'}}>🔧 结构杀号参数配置</div>
               <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px'}}>
@@ -2586,7 +2588,8 @@ function App() {
                 borderRadius: '6px',
                 marginBottom: '12px',
                 fontSize: '0.9em',
-                fontWeight: '500'
+                fontWeight: '500',
+                color: '#333'
               }}>
                 {eliminationResult.summary}
               </div>
@@ -2651,14 +2654,15 @@ function App() {
                   background: '#f8f4ff',
                   borderRadius: '8px',
                   border: '1px dashed #9b59b6',
-                  fontSize: '0.8em'
+                  fontSize: '0.8em',
+                  color: '#333'
                 }}>
-                  <div style={{fontWeight: 'bold', marginBottom: '8px', color: '#9b59b6'}}>🐛 调试信息</div>
+                  <div style={{fontWeight: 'bold', marginBottom: '8px', color: '#7b1fa2'}}>🐛 调试信息</div>
                   
                   {/* 杀号统计 */}
                   <div style={{marginBottom: '10px'}}>
-                    <strong>杀号统计：</strong>
-                    <ul style={{margin: '4px 0 0 20px', padding: 0}}>
+                    <strong style={{color: '#333'}}>杀号统计：</strong>
+                    <ul style={{margin: '4px 0 0 20px', padding: 0, color: '#333'}}>
                       <li>前区杀掉: {eliminationResult.frontEliminated.length}个，保留: {eliminationResult.frontRemaining.length}个</li>
                       <li>后区杀掉: {eliminationResult.backEliminated.length}个，保留: {eliminationResult.backRemaining.length}个</li>
                       <li>杀号模式: {eliminationOptions.mode === 'basic' ? '基础杀号' : eliminationOptions.mode === 'structural' ? '结构杀号' : eliminationOptions.mode === 'mixed_union' ? '混合并集' : '混合交集'}</li>
@@ -2667,8 +2671,8 @@ function App() {
 
                   {/* 参数配置 */}
                   <div style={{marginBottom: '10px'}}>
-                    <strong>当前参数：</strong>
-                    <ul style={{margin: '4px 0 0 20px', padding: 0}}>
+                    <strong style={{color: '#333'}}>当前参数：</strong>
+                    <ul style={{margin: '4px 0 0 20px', padding: 0, color: '#333'}}>
                       <li>近N期窗口: {eliminationOptions.recentPeriods}期</li>
                       <li>前区过热阈值: ≥{eliminationOptions.overheatCount}次</li>
                       <li>后区过热阈值: ≥{eliminationOptions.backOverheatCount}次</li>
@@ -2679,10 +2683,10 @@ function App() {
 
                   {/* 各算法详细数据 */}
                   <div>
-                    <strong>各算法详细数据：</strong>
+                    <strong style={{color: '#333'}}>各算法详细数据：</strong>
                     {eliminationResult.algorithmDetails.map((algo, idx) => (
-                      <div key={idx} style={{marginLeft: '10px', marginTop: '6px', paddingBottom: '6px', borderBottom: '1px solid #e0d0f0'}}>
-                        <div><strong>{algo.name}:</strong></div>
+                      <div key={idx} style={{marginLeft: '10px', marginTop: '6px', paddingBottom: '6px', borderBottom: '1px solid #e0d0f0', color: '#333'}}>
+                        <div><strong style={{color: '#333'}}>{algo.name}:</strong></div>
                         <div style={{marginLeft: '10px', fontSize: '0.9em'}}>
                           前区: {algo.frontCount}个 {algo.frontNumbers && algo.frontNumbers.length > 0 && `(${algo.frontNumbers.join(', ')})`}<br/>
                           后区: {algo.backCount}个 {algo.backNumbers && algo.backNumbers.length > 0 && `(${algo.backNumbers.join(', ')})`}

@@ -4687,18 +4687,53 @@ button.success {
   }
   
   /* 杀号参数区域 */
-  .elimination-options {
-    font-size: 0.9em !important;
-  }
-  
-  .elimination-options label {
-    color: #444 !important;
-  }
-  
   .elimination-options select {
     width: 100% !important;
     font-size: 1em !important;
     padding: 8px 6px !important;
+  }
+  
+  /* 杀号参数配置区域文字加深 */
+  .elimination-options {
+    color: #333 !important;
+    font-size: 0.9em !important;
+  }
+  
+  .elimination-options label {
+    color: #333 !important;
+    font-weight: 500 !important;
+  }
+  
+  .elimination-options select option {
+    color: #333 !important;
+  }
+  
+  /* 杀号完成摘要文字加深 */
+  .elimination-summary {
+    color: #333 !important;
+    font-weight: 600 !important;
+  }
+  
+  /* 算法详情文字加深 */
+  .elimination-algorithms {
+    color: #333 !important;
+  }
+  
+  .elimination-algorithms strong {
+    color: #333 !important;
+  }
+  
+  /* 调试信息文字加深 */
+  .debug-info {
+    color: #333 !important;
+  }
+  
+  .debug-info li {
+    color: #333 !important;
+  }
+  
+  .debug-info strong {
+    color: #333 !important;
   }
 }
 
@@ -4720,5 +4755,30 @@ button.success {
   
   .fushi-number-picker {
     gap: 2px !important;
+  }
+  
+  /* 480px断点也加深文字 */
+  .elimination-options {
+    color: #333 !important;
+  }
+  
+  .elimination-options label {
+    color: #333 !important;
+  }
+  
+  .elimination-summary {
+    color: #333 !important;
+  }
+  
+  .elimination-algorithms {
+    color: #333 !important;
+  }
+  
+  .debug-info {
+    color: #333 !important;
+  }
+  
+  .debug-info li {
+    color: #333 !important;
   }
 }
