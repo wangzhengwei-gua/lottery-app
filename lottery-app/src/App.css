@@ -4558,3 +4558,76 @@ button.success {
     font-size: 0.75em;
   }
 }
+
+/* ==================== 复式玩法样式 ==================== */
+
+.fushi-section {
+  margin-top: 20px;
+}
+
+.fushi-section h2 {
+  color: #c0392b;
+  border-bottom: 2px solid #e74c3c;
+  padding-bottom: 8px;
+}
+
+.elimination-result {
+  margin-top: 15px;
+}
+
+.fushi-number-btn.eliminated {
+  animation: eliminated-pulse 0.5s ease-in-out;
+}
+
+.fushi-number-btn.fushi-selected {
+  transform: scale(1.05);
+}
+
+@keyframes eliminated-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.elimination-algorithms {
+  margin-bottom: 10px;
+  background: #fafafa;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.elimination-algo-item:hover {
+  background: #f5f5f5;
+}
+
+.fushi-preview {
+  transition: all 0.3s;
+}
+
+.fushi-result .result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.fushi-result .result-header h3 {
+  color: #2e7d32;
+  margin: 0;
+}
+
+/* 复式玩法杀号热力图提示 */
+.elimination-numbers .fushi-number-btn[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  white-space: nowrap;
+  z-index: 10;
+}

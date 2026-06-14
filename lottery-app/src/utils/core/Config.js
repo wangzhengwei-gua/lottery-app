@@ -22,8 +22,8 @@ export const CONFIG = {
   TIME_DECAY_FACTOR: 0.95,  // 时间衰减因子
   HYBRID_MODEL_COUNT: 3,    // 混合模型使用的模型数量
   QUALITY_SCORE_THRESHOLD: 75,  // 质量评分阈值
-  RECENT_DRAWS_FOR_TREND: 15,  // 用于趋势分析的最近期数
-  ADAPTIVE_WEIGHT_WINDOW: 15,  // 自适应权重窗口大小
+  RECENT_DRAWS_FOR_TREND: 30,  // 用于趋势分析的最近期数（3个智能推荐模型统一使用30期样本）
+  ADAPTIVE_WEIGHT_WINDOW: 30,  // 自适应权重窗口大小（与趋势分析窗口同步）
   
   // 后区多样性控制参数
   BACK_WEIGHT_CAP: 3,       // 后区权重上限（防止热号权重过大）

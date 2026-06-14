@@ -16,10 +16,8 @@ export class NormalDanTuoModel {
    * @returns {Object} { danSelected, tuoSelected, probabilityInfo, description }
    */
   static recommendFront(analyzer, danCount = 3, strategy = 'balanced') {
-    console.log('📊 正态分布胆拖推荐（前区）');
+    console.log('📊 正态分布胆拖推荐（前区）- 样本量：近30期');
 
-    const [frontCounter] = analyzer.frequencyAnalyzer.analyzeFrequency();
-    const [expFront] = analyzer.frequencyAnalyzer.calculateExpectedValue();
     const conditionalProb = analyzer.conditionalProbability.calculateConditionalProbability();
     const omissionData = analyzer.omissionCalculator.calculateOmission();
     const avgFrontOmission = analyzer.omissionCalculator.getAverageOmission('front');
@@ -29,19 +27,34 @@ export class NormalDanTuoModel {
       return { danSelected: [], tuoSelected: [], probabilityInfo: [], description: '数据不足' };
     }
 
-    // 目标参数
-    const targetSumFront = Math.round(expFront * CONFIG.FRONT_COUNT);
+    // ========== 样本量控制：统一使用近30期数据 ==========
+    const recentData = activeData.slice(-30);
+    const totalDraws = recentData.length;
 
-    // 融合频率+条件概率+遗漏回归的权重（补全遗漏维度）
+    // 1. 计算近30期前区频率
+    const recentFrontFreq = {};
+    for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) recentFrontFreq[i] = 0;
+    for (const draw of recentData) {
+      for (const num of draw.front) recentFrontFreq[num]++;
+    }
+
+    // 2. 计算近30期期望值（目标和值）
+    const recentFrontSums = recentData.map(d => d.front.reduce((a, b) => a + b, 0));
+    const avgFrontSum = recentFrontSums.reduce((a, b) => a + b, 0) / (recentFrontSums.length || 1);
+    const targetSumFront = Math.round(avgFrontSum); // 近30期平均和值作为目标
+
+    // 3. 融合近30期频率+条件概率+遗漏回归的权重
     const frontFreqWeights = {};
+    const maxFreq = Math.max(...Object.values(recentFrontFreq), 0);
     for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) {
-      const freq = (frontCounter[String(i)] || frontCounter[i] || 0) + 1;
+      const freq = (recentFrontFreq[i] || 0) + 1; // 近30期频率 +1平滑
+      const freqNorm = freq / (maxFreq + 1); // 归一化频率
       const cond = (conditionalProb.front[i] || 0) * CONFIG.CONDITIONAL_WEIGHT * conditionalProb.confidence * 10;
-      // 遗漏回归加成：遗漏越高越可能回归，增加权重
+      // 遗漏回归加成：遗漏越高越可能回归
       const currentOmission = omissionData.front[i] || 0;
       const omissionDeviation = currentOmission - avgFrontOmission;
-      const omissionBonus = omissionDeviation > 0 ? omissionDeviation / (avgFrontOmission + 1) : 0; // 归一化遗漏偏离
-      frontFreqWeights[i] = freq + cond + omissionBonus * 3; // 遗漏回归权重系数3
+      const omissionBonus = omissionDeviation > 0 ? omissionDeviation / (avgFrontOmission + 1) : 0;
+      frontFreqWeights[i] = freqNorm * 10 + cond + omissionBonus * 3; // 归一化频率权重*10 + 遗漏回归权重系数3
     }
 
     // 引导式搜索：找和值最接近目标的前区组合
@@ -135,22 +148,38 @@ export class NormalDanTuoModel {
    * 推荐后区胆码+拖码
    */
   static recommendBack(analyzer, backDanCount = 1) {
-    const [, backCounter] = analyzer.frequencyAnalyzer.analyzeFrequency();
-    const [, expBack] = analyzer.frequencyAnalyzer.calculateExpectedValue();
     const conditionalProb = analyzer.conditionalProbability.calculateConditionalProbability();
     const omissionData = analyzer.omissionCalculator.calculateOmission();
     const avgBackOmission = analyzer.omissionCalculator.getAverageOmission('back');
-    const targetSumBack = Math.round(expBack * CONFIG.BACK_COUNT);
+    const activeData = analyzer.getActiveData();
 
+    // ========== 样本量控制：统一使用近30期数据 ==========
+    const recentData = activeData.slice(-30);
+
+    // 1. 计算近30期后区频率
+    const recentBackFreq = {};
+    for (let i = 1; i <= CONFIG.BACK_RANGE; i++) recentBackFreq[i] = 0;
+    for (const draw of recentData) {
+      for (const num of draw.back) recentBackFreq[num]++;
+    }
+
+    // 2. 计算近30期期望值（目标和值）
+    const recentBackSums = recentData.map(d => d.back.reduce((a, b) => a + b, 0));
+    const avgBackSum = recentBackSums.reduce((a, b) => a + b, 0) / (recentBackSums.length || 1);
+    const targetSumBack = Math.round(avgBackSum);
+
+    // 3. 融合近30期频率+条件概率+遗漏回归的权重
     const backFreqWeights = {};
+    const maxBackFreq = Math.max(...Object.values(recentBackFreq), 0);
     for (let i = 1; i <= CONFIG.BACK_RANGE; i++) {
-      const freq = (backCounter[String(i)] || backCounter[i] || 0) + 1;
+      const freq = (recentBackFreq[i] || 0) + 1;
+      const freqNorm = freq / (maxBackFreq + 1);
       const cond = (conditionalProb.back[i] || 0) * CONFIG.BACK_CONDITIONAL_WEIGHT * conditionalProb.confidence * 10;
       // 遗漏回归加成
       const currentOmission = omissionData.back[i] || 0;
       const omissionDeviation = currentOmission - avgBackOmission;
       const omissionBonus = omissionDeviation > 0 ? omissionDeviation / (avgBackOmission + 1) : 0;
-      backFreqWeights[i] = freq + cond + omissionBonus * 3;
+      backFreqWeights[i] = freqNorm * 10 + cond + omissionBonus * 3;
     }
 
     // 搜索最接近目标和值的后区组合

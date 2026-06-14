@@ -1,0 +1,732 @@
+{
+  "balanced": {
+    "validPeriods": 165,
+    "summaryByMultiplier": {
+      "baseline_0": {
+        "totalAvgHits": 66.25000000000001,
+        "totalDetHits": 66,
+        "totalAvgRegHits": 1.2,
+        "totalDetRegHits": 0,
+        "hitAtLeast1Count": 118,
+        "detHitAtLeast1Count": 56,
+        "regPeriodsTotalAvgHits": 34.400000000000006,
+        "regPeriodsTotalDetHits": 36,
+        "regPeriodsTotalAvgRegHits": 1.2,
+        "regPeriodsTotalDetRegHits": 0,
+        "regPeriodsDetHitAtLeast1": 30,
+        "highOmissionTotalAvgHits": 35.15000000000001,
+        "highOmissionTotalDetHits": 35,
+        "regPeriodCount": 91,
+        "highOmissionPeriodCount": 96
+      },
+      "final_0.5": {
+        "totalAvgHits": 67.05,
+        "totalDetHits": 63,
+        "totalAvgRegHits": 3.4999999999999996,
+        "totalDetRegHits": 3,
+        "hitAtLeast1Count": 120,
+        "detHitAtLeast1Count": 56,
+        "regPeriodsTotalAvgHits": 35.449999999999996,
+        "regPeriodsTotalDetHits": 30,
+        "regPeriodsTotalAvgRegHits": 3.4999999999999996,
+        "regPeriodsTotalDetRegHits": 3,
+        "regPeriodsDetHitAtLeast1": 28,
+        "highOmissionTotalAvgHits": 36.24999999999999,
+        "highOmissionTotalDetHits": 33,
+        "regPeriodCount": 91,
+        "highOmissionPeriodCount": 96
+      },
+      "full_1.0": {
+        "totalAvgHits": 63.550000000000004,
+        "totalDetHits": 64,
+        "totalAvgRegHits": 6.699999999999998,
+        "totalDetRegHits": 6,
+        "hitAtLeast1Count": 119,
+        "detHitAtLeast1Count": 53,
+        "regPeriodsTotalAvgHits": 36.95000000000001,
+        "regPeriodsTotalDetHits": 38,
+        "regPeriodsTotalAvgRegHits": 6.699999999999998,
+        "regPeriodsTotalDetRegHits": 6,
+        "regPeriodsDetHitAtLeast1": 31,
+        "highOmissionTotalAvgHits": 37.55000000000001,
+        "highOmissionTotalDetHits": 38,
+        "regPeriodCount": 91,
+        "highOmissionPeriodCount": 96
+      },
+      "strong_1.5": {
+        "totalAvgHits": 67.5,
+        "totalDetHits": 67,
+        "totalAvgRegHits": 13.450000000000003,
+        "totalDetRegHits": 14,
+        "hitAtLeast1Count": 116,
+        "detHitAtLeast1Count": 61,
+        "regPeriodsTotalAvgHits": 42.95000000000002,
+        "regPeriodsTotalDetHits": 46,
+        "regPeriodsTotalAvgRegHits": 13.450000000000003,
+        "regPeriodsTotalDetRegHits": 14,
+        "regPeriodsDetHitAtLeast1": 41,
+        "highOmissionTotalAvgHits": 43.15000000000001,
+        "highOmissionTotalDetHits": 45,
+        "regPeriodCount": 91,
+        "highOmissionPeriodCount": 96
+      }
+    },
+    "regPeriodCount": 91,
+    "highOmissionPeriodCount": 96,
+    "recentRegPeriodDetails": [
+      {
+        "period": 197,
+        "actualFront": [
+          9,
+          20,
+          21,
+          23,
+          28
+        ],
+        "regressionNumbers": [
+          {
+            "number": 23,
+            "omission": 26
+          }
+        ],
+        "baselineDeterministicHits": 1,
+        "fullDeterministicHits": 0,
+        "baselineTopFrontDan": [
+          8,
+          9,
+          13
+        ],
+        "fullTopFrontDan": [
+          8,
+          13,
+          26
+        ]
+      },
+      {
+        "period": 200,
+        "actualFront": [
+          6,
+          10,
+          14,
+          23,
+          33
+        ],
+        "regressionNumbers": [
+          {
+            "number": 10,
+            "omission": 22
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 0,
+        "baselineTopFrontDan": [
+          8,
+          9,
+          26
+        ],
+        "fullTopFrontDan": [
+          8,
+          9,
+          26
+        ]
+      },
+      {
+        "period": 201,
+        "actualFront": [
+          13,
+          18,
+          28,
+          32,
+          33
+        ],
+        "regressionNumbers": [
+          {
+            "number": 32,
+            "omission": 13
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 0,
+        "baselineTopFrontDan": [
+          8,
+          9,
+          26
+        ],
+        "fullTopFrontDan": [
+          9,
+          14,
+          26
+        ]
+      },
+      {
+        "period": 203,
+        "actualFront": [
+          2,
+          9,
+          14,
+          20,
+          31
+        ],
+        "regressionNumbers": [
+          {
+            "number": 31,
+            "omission": 33
+          }
+        ],
+        "baselineDeterministicHits": 1,
+        "fullDeterministicHits": 1,
+        "baselineTopFrontDan": [
+          8,
+          9,
+          13
+        ],
+        "fullTopFrontDan": [
+          8,
+          9,
+          26
+        ]
+      },
+      {
+        "period": 206,
+        "actualFront": [
+          6,
+          7,
+          18,
+          21,
+          30
+        ],
+        "regressionNumbers": [
+          {
+            "number": 30,
+            "omission": 20
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 0,
+        "baselineTopFrontDan": [
+          9,
+          14,
+          33
+        ],
+        "fullTopFrontDan": [
+          9,
+          14,
+          33
+        ]
+      },
+      {
+        "period": 207,
+        "actualFront": [
+          23,
+          25,
+          26,
+          27,
+          34
+        ],
+        "regressionNumbers": [
+          {
+            "number": 25,
+            "omission": 15
+          },
+          {
+            "number": 34,
+            "omission": 15
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 0,
+        "baselineTopFrontDan": [
+          8,
+          9,
+          33
+        ],
+        "fullTopFrontDan": [
+          8,
+          9,
+          33
+        ]
+      },
+      {
+        "period": 208,
+        "actualFront": [
+          7,
+          12,
+          13,
+          18,
+          34
+        ],
+        "regressionNumbers": [
+          {
+            "number": 12,
+            "omission": 14
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 0,
+        "baselineTopFrontDan": [
+          9,
+          26,
+          33
+        ],
+        "fullTopFrontDan": [
+          9,
+          26,
+          33
+        ]
+      },
+      {
+        "period": 209,
+        "actualFront": [
+          6,
+          13,
+          17,
+          19,
+          26
+        ],
+        "regressionNumbers": [
+          {
+            "number": 19,
+            "omission": 15
+          }
+        ],
+        "baselineDeterministicHits": 1,
+        "fullDeterministicHits": 1,
+        "baselineTopFrontDan": [
+          8,
+          13,
+          34
+        ],
+        "fullTopFrontDan": [
+          7,
+          8,
+          13
+        ]
+      },
+      {
+        "period": 212,
+        "actualFront": [
+          7,
+          15,
+          20,
+          24,
+          29
+        ],
+        "regressionNumbers": [
+          {
+            "number": 29,
+            "omission": 17
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 1,
+        "baselineTopFrontDan": [
+          6,
+          9,
+          26
+        ],
+        "fullTopFrontDan": [
+          6,
+          7,
+          26
+        ]
+      },
+      {
+        "period": 215,
+        "actualFront": [
+          4,
+          11,
+          12,
+          13,
+          25
+        ],
+        "regressionNumbers": [
+          {
+            "number": 4,
+            "omission": 28
+          },
+          {
+            "number": 11,
+            "omission": 16
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 0,
+        "baselineTopFrontDan": [
+          3,
+          26,
+          33
+        ],
+        "fullTopFrontDan": [
+          5,
+          26,
+          33
+        ]
+      }
+    ]
+  },
+  "conservative": {
+    "validPeriods": 165,
+    "summaryByMultiplier": {
+      "baseline_0": {
+        "totalAvgHits": 67.09999999999997,
+        "totalDetHits": 74,
+        "totalAvgRegHits": 8.149999999999999,
+        "totalDetRegHits": 9,
+        "hitAtLeast1Count": 102,
+        "detHitAtLeast1Count": 59,
+        "regPeriodsTotalAvgHits": 37.94999999999999,
+        "regPeriodsTotalDetHits": 41,
+        "regPeriodsTotalAvgRegHits": 8.149999999999999,
+        "regPeriodsTotalDetRegHits": 9,
+        "regPeriodsDetHitAtLeast1": 33,
+        "highOmissionTotalAvgHits": 46.149999999999984,
+        "highOmissionTotalDetHits": 49,
+        "regPeriodCount": 91,
+        "highOmissionPeriodCount": 96
+      },
+      "final_0.5": {
+        "totalAvgHits": 66.35,
+        "totalDetHits": 67,
+        "totalAvgRegHits": 18.400000000000002,
+        "totalDetRegHits": 21,
+        "hitAtLeast1Count": 107,
+        "detHitAtLeast1Count": 55,
+        "regPeriodsTotalAvgHits": 44.05,
+        "regPeriodsTotalDetHits": 47,
+        "regPeriodsTotalAvgRegHits": 18.400000000000002,
+        "regPeriodsTotalDetRegHits": 21,
+        "regPeriodsDetHitAtLeast1": 38,
+        "highOmissionTotalAvgHits": 48.85,
+        "highOmissionTotalDetHits": 51,
+        "regPeriodCount": 91,
+        "highOmissionPeriodCount": 96
+      },
+      "full_1.0": {
+        "totalAvgHits": 62.45000000000001,
+        "totalDetHits": 60,
+        "totalAvgRegHits": 20.950000000000003,
+        "totalDetRegHits": 21,
+        "hitAtLeast1Count": 97,
+        "detHitAtLeast1Count": 54,
+        "regPeriodsTotalAvgHits": 44.75,
+        "regPeriodsTotalDetHits": 43,
+        "regPeriodsTotalAvgRegHits": 20.950000000000003,
+        "regPeriodsTotalDetRegHits": 21,
+        "regPeriodsDetHitAtLeast1": 38,
+        "highOmissionTotalAvgHits": 47.85,
+        "highOmissionTotalDetHits": 46,
+        "regPeriodCount": 91,
+        "highOmissionPeriodCount": 96
+      },
+      "strong_1.5": {
+        "totalAvgHits": 62.700000000000024,
+        "totalDetHits": 61,
+        "totalAvgRegHits": 25.599999999999998,
+        "totalDetRegHits": 27,
+        "hitAtLeast1Count": 94,
+        "detHitAtLeast1Count": 53,
+        "regPeriodsTotalAvgHits": 46.60000000000001,
+        "regPeriodsTotalDetHits": 47,
+        "regPeriodsTotalAvgRegHits": 25.599999999999998,
+        "regPeriodsTotalDetRegHits": 27,
+        "regPeriodsDetHitAtLeast1": 39,
+        "highOmissionTotalAvgHits": 49.10000000000003,
+        "highOmissionTotalDetHits": 48,
+        "regPeriodCount": 91,
+        "highOmissionPeriodCount": 96
+      }
+    },
+    "regPeriodCount": 91,
+    "highOmissionPeriodCount": 96,
+    "recentRegPeriodDetails": [
+      {
+        "period": 197,
+        "actualFront": [
+          9,
+          20,
+          21,
+          23,
+          28
+        ],
+        "regressionNumbers": [
+          {
+            "number": 23,
+            "omission": 26
+          }
+        ],
+        "baselineDeterministicHits": 1,
+        "fullDeterministicHits": 1,
+        "baselineTopFrontDan": [
+          8,
+          9,
+          11
+        ],
+        "fullTopFrontDan": [
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "period": 200,
+        "actualFront": [
+          6,
+          10,
+          14,
+          23,
+          33
+        ],
+        "regressionNumbers": [
+          {
+            "number": 10,
+            "omission": 22
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 1,
+        "baselineTopFrontDan": [
+          8,
+          9,
+          12
+        ],
+        "fullTopFrontDan": [
+          9,
+          10,
+          30
+        ]
+      },
+      {
+        "period": 201,
+        "actualFront": [
+          13,
+          18,
+          28,
+          32,
+          33
+        ],
+        "regressionNumbers": [
+          {
+            "number": 32,
+            "omission": 13
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 0,
+        "baselineTopFrontDan": [
+          8,
+          9,
+          26
+        ],
+        "fullTopFrontDan": [
+          8,
+          9,
+          26
+        ]
+      },
+      {
+        "period": 203,
+        "actualFront": [
+          2,
+          9,
+          14,
+          20,
+          31
+        ],
+        "regressionNumbers": [
+          {
+            "number": 31,
+            "omission": 33
+          }
+        ],
+        "baselineDeterministicHits": 1,
+        "fullDeterministicHits": 1,
+        "baselineTopFrontDan": [
+          8,
+          9,
+          12
+        ],
+        "fullTopFrontDan": [
+          8,
+          9,
+          12
+        ]
+      },
+      {
+        "period": 206,
+        "actualFront": [
+          6,
+          7,
+          18,
+          21,
+          30
+        ],
+        "regressionNumbers": [
+          {
+            "number": 30,
+            "omission": 20
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 1,
+        "baselineTopFrontDan": [
+          9,
+          12,
+          34
+        ],
+        "fullTopFrontDan": [
+          5,
+          6,
+          34
+        ]
+      },
+      {
+        "period": 207,
+        "actualFront": [
+          23,
+          25,
+          26,
+          27,
+          34
+        ],
+        "regressionNumbers": [
+          {
+            "number": 25,
+            "omission": 15
+          },
+          {
+            "number": 34,
+            "omission": 15
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 1,
+        "baselineTopFrontDan": [
+          8,
+          9,
+          13
+        ],
+        "fullTopFrontDan": [
+          9,
+          12,
+          34
+        ]
+      },
+      {
+        "period": 208,
+        "actualFront": [
+          7,
+          12,
+          13,
+          18,
+          34
+        ],
+        "regressionNumbers": [
+          {
+            "number": 12,
+            "omission": 14
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 0,
+        "baselineTopFrontDan": [
+          8,
+          9,
+          32
+        ],
+        "fullTopFrontDan": [
+          8,
+          9,
+          29
+        ]
+      },
+      {
+        "period": 209,
+        "actualFront": [
+          6,
+          13,
+          17,
+          19,
+          26
+        ],
+        "regressionNumbers": [
+          {
+            "number": 19,
+            "omission": 15
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 0,
+        "baselineTopFrontDan": [
+          7,
+          8,
+          32
+        ],
+        "fullTopFrontDan": [
+          7,
+          8,
+          11
+        ]
+      },
+      {
+        "period": 212,
+        "actualFront": [
+          7,
+          15,
+          20,
+          24,
+          29
+        ],
+        "regressionNumbers": [
+          {
+            "number": 29,
+            "omission": 17
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 2,
+        "baselineTopFrontDan": [
+          8,
+          9,
+          33
+        ],
+        "fullTopFrontDan": [
+          7,
+          8,
+          29
+        ]
+      },
+      {
+        "period": 215,
+        "actualFront": [
+          4,
+          11,
+          12,
+          13,
+          25
+        ],
+        "regressionNumbers": [
+          {
+            "number": 4,
+            "omission": 28
+          },
+          {
+            "number": 11,
+            "omission": 16
+          }
+        ],
+        "baselineDeterministicHits": 0,
+        "fullDeterministicHits": 0,
+        "baselineTopFrontDan": [
+          9,
+          26,
+          33
+        ],
+        "fullTopFrontDan": [
+          8,
+          9,
+          33
+        ]
+      }
+    ]
+  }
+}

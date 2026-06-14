@@ -16,16 +16,25 @@ export class ZhouyiDanTuoModel {
    * @returns {Object} { danSelected, tuoSelected, probabilityInfo, description }
    */
   static recommendFront(analyzer, danCount = 3, strategy = 'balanced') {
-    console.log('🧭 周易时空胆拖推荐（前区）');
+    console.log('🧭 周易时空胆拖推荐（前区）- 样本量：近30期');
 
     const now = new Date();
     const conditionalProb = analyzer.conditionalProbability.calculateConditionalProbability();
     const correlation = analyzer.correlationAnalyzer.calculateNumberCorrelation();
-    const [frontCounter] = analyzer.frequencyAnalyzer.analyzeFrequency();
     const activeData = analyzer.getActiveData();
 
     if (activeData.length === 0) {
       return { danSelected: [], tuoSelected: [], probabilityInfo: [], description: '数据不足' };
+    }
+
+    // ========== 样本量控制：统一使用近30期数据 ==========
+    const recentData = activeData.slice(-30); // 近30期数据
+
+    // 计算近30期前区频率
+    const recentFrontFreq = {};
+    for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) recentFrontFreq[i] = 0;
+    for (const draw of recentData) {
+      for (const num of draw.front) recentFrontFreq[num]++;
     }
 
     // 1. 获取时间要素
@@ -81,30 +90,31 @@ export class ZhouyiDanTuoModel {
       combinedPool.push(...movingLineNumbers);
     }
 
-    // 4. 开奖日特征：动态推算每个历史draw的开奖日
+    // 4. 开奖日特征：基于近30期数据统计目标开奖日的前区频率分布
     const drawDayCycle = [1, 3, 6];
     const drawDayToCyclePos = { 1: 0, 3: 1, 6: 2 };
     const targetCyclePos = drawDayToCyclePos[nextDrawDay];
-    const totalDraws = activeData.length;
+    const totalDraws = recentData.length; // 近30期期数
     const weekdayOffset = ((targetCyclePos - totalDraws % 3) + 3) % 3;
 
-    // 统计目标开奖日的历史前区频率分布
+    // 统计目标开奖日的近30期前区频率分布
     const weekdayFrontFreq = {};
-    for (let i = 0; i < activeData.length; i++) {
+    for (let i = 0; i < recentData.length; i++) {
       const drawWeekday = drawDayCycle[(i + weekdayOffset) % 3];
       if (drawWeekday === nextDrawDay) {
-        for (const num of activeData[i].front) {
+        for (const num of recentData[i].front) {
           weekdayFrontFreq[num] = (weekdayFrontFreq[num] || 0) + 1;
         }
       }
     }
     const maxWeekdayFreq = Math.max(...Object.values(weekdayFrontFreq), 0);
 
-    // 5. 构建周易时空融合权重
+    // 5. 构建周易时空融合权重（基于近30期频率）
+    const maxFreq = Math.max(...Object.values(recentFrontFreq), 0);
     const zhouyiFrontWeights = {};
     for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) {
       const isInPool = combinedPool.includes(i);
-      const freqWeight = isInPool ? ((frontCounter[String(i)] || frontCounter[i] || 0) + 1) * 2 : 1;
+      const freqWeight = isInPool ? ((recentFrontFreq[i] || 0) + 1) * 2 / (maxFreq + 1) * 10 : 1; // 近30期频率归一化
       const condBonus = (conditionalProb.front[i] || 0) * CONFIG.CONDITIONAL_WEIGHT * conditionalProb.confidence * 8;
 
       let corrBonus = 0;
@@ -184,8 +194,18 @@ export class ZhouyiDanTuoModel {
   static recommendBack(analyzer, backDanCount = 1) {
     const now = new Date();
     const hour = now.getHours();
-    const [, backCounter] = analyzer.frequencyAnalyzer.analyzeFrequency();
     const conditionalProb = analyzer.conditionalProbability.calculateConditionalProbability();
+
+    // ========== 样本量控制：统一使用近30期数据 ==========
+    const activeData = analyzer.getActiveData();
+    const recentData = activeData.slice(-30);
+
+    // 计算近30期后区频率
+    const recentBackFreq = {};
+    for (let i = 1; i <= CONFIG.BACK_RANGE; i++) recentBackFreq[i] = 0;
+    for (const draw of recentData) {
+      for (const num of draw.back) recentBackFreq[num]++;
+    }
 
     // 时辰候选映射（与ZhouyiSpaceTime模型一致）
     const hourBackMap = {
@@ -205,7 +225,7 @@ export class ZhouyiDanTuoModel {
 
     const backCandidates = hourBackMap[hour] || [1, 6, 7, 12];
 
-    // 开奖日特征
+    // 开奖日特征（基于近30期数据）
     const weekday = now.getDay();
     const drawDays = [1, 3, 6];
     let nextDrawDay = null;
@@ -217,30 +237,30 @@ export class ZhouyiDanTuoModel {
     }
     if (!nextDrawDay) nextDrawDay = 1;
 
-    const activeData = analyzer.getActiveData();
     const drawDayCycle = [1, 3, 6];
     const drawDayToCyclePos = { 1: 0, 3: 1, 6: 2 };
     const targetCyclePos = drawDayToCyclePos[nextDrawDay];
-    const totalDraws = activeData.length;
+    const totalDraws = recentData.length;
     const weekdayOffset = ((targetCyclePos - totalDraws % 3) + 3) % 3;
 
-    // 统计目标开奖日的后区频率
+    // 统计目标开奖日的近30期后区频率
     const weekdayBackFreq = {};
-    for (let i = 0; i < activeData.length; i++) {
+    for (let i = 0; i < recentData.length; i++) {
       const drawWeekday = drawDayCycle[(i + weekdayOffset) % 3];
       if (drawWeekday === nextDrawDay) {
-        for (const num of activeData[i].back) {
+        for (const num of recentData[i].back) {
           weekdayBackFreq[num] = (weekdayBackFreq[num] || 0) + 1;
         }
       }
     }
     const maxWeekdayBackFreq = Math.max(...Object.values(weekdayBackFreq), 0);
 
+    const maxBackFreq = Math.max(...Object.values(recentBackFreq), 0);
     const expandedBackWeights = {};
     for (let i = 1; i <= CONFIG.BACK_RANGE; i++) {
       const isTimeCandidate = backCandidates.includes(i);
       const timeWeight = isTimeCandidate ? 2.0 : 0.5;
-      const freqWeight = (backCounter[String(i)] || backCounter[i] || 0) + 1;
+      const freqWeight = ((recentBackFreq[i] || 0) + 1) / (maxBackFreq + 1) * 10; // 近30期频率归一化
       const condWeight = (conditionalProb.back[i] || 0) * CONFIG.BACK_CONDITIONAL_WEIGHT * conditionalProb.confidence * 8;
       const weekdayFreqNum = weekdayBackFreq[i] || 0;
       const weekdayBonus = maxWeekdayBackFreq > 0 ? (weekdayFreqNum / maxWeekdayBackFreq) * 3 : 0;

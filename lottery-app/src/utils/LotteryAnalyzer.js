@@ -32,6 +32,8 @@ import { TimeDecayModel } from './algorithms/TimeDecay.js';
 import { MeanRegressionModel } from './algorithms/MeanRegression.js';
 import { BalancedStrategyModel } from './algorithms/BalancedStrategy.js';
 import { NormalDistributionModel } from './algorithms/NormalDistribution.js';
+import { NumberEliminator } from './optimization/NumberEliminator.js';
+import { StructuralEliminator } from './optimization/StructuralEliminator.js';
 
 class LotteryAnalyzer {
   constructor() {
@@ -1895,6 +1897,49 @@ class LotteryAnalyzer {
     }
     
     return { front: frontProb, back: backProb };
+  }
+
+  /**
+   * 复式玩法 - 杀号分析
+   * @param {Object} options - 杀号配置选项
+   * @returns {Object} 杀号结果
+   */
+  eliminateNumbers(options = {}) {
+    return NumberEliminator.eliminate(this, options);
+  }
+
+  /**
+   * 结构杀号分析（增强版）
+   * @param {Object} options - 杀号配置选项
+   * @returns {Object} 杀号结果
+   */
+  structuralEliminate(options = {}) {
+    return StructuralEliminator.eliminate(this, options);
+  }
+
+  /** 回测验证 */
+  backtestEliminate(options = {}) {
+    return StructuralEliminator.backtest(this, options);
+  }
+
+  /** 混合模式杀号 */
+  mixedEliminateNumbers(options = {}) {
+    return StructuralEliminator.mixedEliminate(this, options);
+  }
+
+  /** 智能推荐杀号模式 */
+  recommendEliminationMode() {
+    return StructuralEliminator.recommendMode(this);
+  }
+
+  /**
+   * 复式玩法 - 生成复式组合
+   * @param {number[]} frontNumbers - 前区号码池
+   * @param {number[]} backNumbers - 后区号码池
+   * @returns {Object} 复式组合结果
+   */
+  generateFushiCombinations(frontNumbers, backNumbers) {
+    return NumberEliminator.generateFushiCombinations(frontNumbers, backNumbers);
   }
 
   /**

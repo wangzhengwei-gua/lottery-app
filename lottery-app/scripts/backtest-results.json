@@ -1,0 +1,6347 @@
+{
+  "hot": {
+    "validPeriods": 100,
+    "totalDanHits": 40,
+    "avgDanHits": 0.4,
+    "successfulPeriods": 37,
+    "hitRate": 0.37,
+    "hitDistribution": {
+      "0": 63,
+      "1": 35,
+      "2": 1,
+      "3": 1
+    },
+    "periodResults": [
+      {
+        "period": 50,
+        "recommendedDan": [
+          5,
+          8,
+          20
+        ],
+        "actualFront": [
+          2,
+          4,
+          13,
+          29,
+          31
+        ],
+        "actualBack": [
+          5,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 51,
+        "recommendedDan": [
+          3,
+          7,
+          20
+        ],
+        "actualFront": [
+          2,
+          4,
+          11,
+          29,
+          30
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 52,
+        "recommendedDan": [
+          7,
+          20,
+          21
+        ],
+        "actualFront": [
+          14,
+          23,
+          29,
+          30,
+          33
+        ],
+        "actualBack": [
+          6,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 53,
+        "recommendedDan": [
+          3,
+          20,
+          25
+        ],
+        "actualFront": [
+          3,
+          12,
+          16,
+          21,
+          29
+        ],
+        "actualBack": [
+          1,
+          2
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 54,
+        "recommendedDan": [
+          7,
+          22,
+          25
+        ],
+        "actualFront": [
+          8,
+          10,
+          25,
+          29,
+          30
+        ],
+        "actualBack": [
+          1,
+          2
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 55,
+        "recommendedDan": [
+          3,
+          7,
+          22
+        ],
+        "actualFront": [
+          12,
+          15,
+          28,
+          29,
+          32
+        ],
+        "actualBack": [
+          8,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 56,
+        "recommendedDan": [
+          20,
+          22,
+          29
+        ],
+        "actualFront": [
+          9,
+          10,
+          11,
+          12,
+          29
+        ],
+        "actualBack": [
+          1,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 57,
+        "recommendedDan": [
+          10,
+          22,
+          29
+        ],
+        "actualFront": [
+          6,
+          11,
+          15,
+          21,
+          23
+        ],
+        "actualBack": [
+          1,
+          7
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 58,
+        "recommendedDan": [
+          20,
+          22,
+          25
+        ],
+        "actualFront": [
+          3,
+          9,
+          10,
+          11,
+          26
+        ],
+        "actualBack": [
+          1,
+          2
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 59,
+        "recommendedDan": [
+          3,
+          11,
+          20
+        ],
+        "actualFront": [
+          12,
+          14,
+          19,
+          33,
+          34
+        ],
+        "actualBack": [
+          1,
+          7
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 60,
+        "recommendedDan": [
+          10,
+          22,
+          29
+        ],
+        "actualFront": [
+          2,
+          11,
+          16,
+          23,
+          28
+        ],
+        "actualBack": [
+          5,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 61,
+        "recommendedDan": [
+          8,
+          10,
+          29
+        ],
+        "actualFront": [
+          14,
+          20,
+          27,
+          28,
+          29
+        ],
+        "actualBack": [
+          6,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 62,
+        "recommendedDan": [
+          20,
+          22,
+          29
+        ],
+        "actualFront": [
+          5,
+          18,
+          26,
+          29,
+          32
+        ],
+        "actualBack": [
+          7,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 63,
+        "recommendedDan": [
+          8,
+          22,
+          29
+        ],
+        "actualFront": [
+          5,
+          10,
+          18,
+          20,
+          34
+        ],
+        "actualBack": [
+          1,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 64,
+        "recommendedDan": [
+          8,
+          11,
+          29
+        ],
+        "actualFront": [
+          7,
+          25,
+          32,
+          33,
+          35
+        ],
+        "actualBack": [
+          4,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 65,
+        "recommendedDan": [
+          20,
+          21,
+          25
+        ],
+        "actualFront": [
+          15,
+          18,
+          27,
+          28,
+          34
+        ],
+        "actualBack": [
+          3,
+          6
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 66,
+        "recommendedDan": [
+          10,
+          21,
+          29
+        ],
+        "actualFront": [
+          6,
+          10,
+          12,
+          21,
+          22
+        ],
+        "actualBack": [
+          1,
+          6
+        ],
+        "danHits": 2,
+        "success": true
+      },
+      {
+        "period": 67,
+        "recommendedDan": [
+          10,
+          22,
+          29
+        ],
+        "actualFront": [
+          1,
+          4,
+          17,
+          20,
+          22
+        ],
+        "actualBack": [
+          4,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 68,
+        "recommendedDan": [
+          11,
+          20,
+          29
+        ],
+        "actualFront": [
+          4,
+          6,
+          7,
+          33,
+          34
+        ],
+        "actualBack": [
+          9,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 69,
+        "recommendedDan": [
+          11,
+          21,
+          22
+        ],
+        "actualFront": [
+          8,
+          9,
+          15,
+          20,
+          22
+        ],
+        "actualBack": [
+          4,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 70,
+        "recommendedDan": [
+          8,
+          20,
+          29
+        ],
+        "actualFront": [
+          1,
+          8,
+          25,
+          31,
+          33
+        ],
+        "actualBack": [
+          5,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 71,
+        "recommendedDan": [
+          20,
+          21,
+          22
+        ],
+        "actualFront": [
+          4,
+          7,
+          15,
+          24,
+          29
+        ],
+        "actualBack": [
+          1,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 72,
+        "recommendedDan": [
+          3,
+          10,
+          22
+        ],
+        "actualFront": [
+          1,
+          4,
+          17,
+          33,
+          34
+        ],
+        "actualBack": [
+          3,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 73,
+        "recommendedDan": [
+          8,
+          10,
+          22
+        ],
+        "actualFront": [
+          2,
+          11,
+          15,
+          18,
+          21
+        ],
+        "actualBack": [
+          5,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 74,
+        "recommendedDan": [
+          7,
+          20,
+          22
+        ],
+        "actualFront": [
+          8,
+          12,
+          16,
+          19,
+          35
+        ],
+        "actualBack": [
+          6,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 75,
+        "recommendedDan": [
+          10,
+          20,
+          22
+        ],
+        "actualFront": [
+          11,
+          18,
+          22,
+          25,
+          29
+        ],
+        "actualBack": [
+          4,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 76,
+        "recommendedDan": [
+          8,
+          22,
+          29
+        ],
+        "actualFront": [
+          12,
+          14,
+          16,
+          19,
+          28
+        ],
+        "actualBack": [
+          1,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 77,
+        "recommendedDan": [
+          10,
+          22,
+          25
+        ],
+        "actualFront": [
+          7,
+          10,
+          15,
+          21,
+          24
+        ],
+        "actualBack": [
+          5,
+          6
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 78,
+        "recommendedDan": [
+          7,
+          8,
+          20
+        ],
+        "actualFront": [
+          2,
+          14,
+          32,
+          34,
+          35
+        ],
+        "actualBack": [
+          5,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 79,
+        "recommendedDan": [
+          11,
+          20,
+          29
+        ],
+        "actualFront": [
+          9,
+          10,
+          18,
+          22,
+          24
+        ],
+        "actualBack": [
+          3,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 80,
+        "recommendedDan": [
+          10,
+          21,
+          29
+        ],
+        "actualFront": [
+          1,
+          4,
+          6,
+          15,
+          18
+        ],
+        "actualBack": [
+          2,
+          3
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 81,
+        "recommendedDan": [
+          10,
+          21,
+          22
+        ],
+        "actualFront": [
+          2,
+          3,
+          4,
+          12,
+          26
+        ],
+        "actualBack": [
+          1,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 82,
+        "recommendedDan": [
+          7,
+          20,
+          22
+        ],
+        "actualFront": [
+          12,
+          17,
+          18,
+          20,
+          34
+        ],
+        "actualBack": [
+          2,
+          5
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 83,
+        "recommendedDan": [
+          18,
+          20,
+          22
+        ],
+        "actualFront": [
+          9,
+          11,
+          13,
+          18,
+          29
+        ],
+        "actualBack": [
+          4,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 84,
+        "recommendedDan": [
+          11,
+          20,
+          22
+        ],
+        "actualFront": [
+          2,
+          5,
+          9,
+          14,
+          33
+        ],
+        "actualBack": [
+          4,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 85,
+        "recommendedDan": [
+          10,
+          20,
+          29
+        ],
+        "actualFront": [
+          2,
+          6,
+          23,
+          24,
+          33
+        ],
+        "actualBack": [
+          1,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 86,
+        "recommendedDan": [
+          10,
+          11,
+          18
+        ],
+        "actualFront": [
+          5,
+          13,
+          14,
+          16,
+          20
+        ],
+        "actualBack": [
+          3,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 87,
+        "recommendedDan": [
+          20,
+          21,
+          22
+        ],
+        "actualFront": [
+          8,
+          9,
+          10,
+          11,
+          35
+        ],
+        "actualBack": [
+          5,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 88,
+        "recommendedDan": [
+          12,
+          18,
+          22
+        ],
+        "actualFront": [
+          2,
+          11,
+          12,
+          32,
+          34
+        ],
+        "actualBack": [
+          3,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 89,
+        "recommendedDan": [
+          10,
+          12,
+          20
+        ],
+        "actualFront": [
+          6,
+          14,
+          19,
+          22,
+          27
+        ],
+        "actualBack": [
+          1,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 90,
+        "recommendedDan": [
+          12,
+          18,
+          20
+        ],
+        "actualFront": [
+          1,
+          19,
+          22,
+          25,
+          27
+        ],
+        "actualBack": [
+          3,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 91,
+        "recommendedDan": [
+          11,
+          12,
+          22
+        ],
+        "actualFront": [
+          4,
+          10,
+          17,
+          25,
+          32
+        ],
+        "actualBack": [
+          5,
+          7
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 92,
+        "recommendedDan": [
+          11,
+          18,
+          25
+        ],
+        "actualFront": [
+          1,
+          7,
+          9,
+          16,
+          30
+        ],
+        "actualBack": [
+          2,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 93,
+        "recommendedDan": [
+          18,
+          22,
+          29
+        ],
+        "actualFront": [
+          4,
+          9,
+          17,
+          30,
+          33
+        ],
+        "actualBack": [
+          5,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 94,
+        "recommendedDan": [
+          18,
+          20,
+          29
+        ],
+        "actualFront": [
+          7,
+          13,
+          14,
+          19,
+          27
+        ],
+        "actualBack": [
+          6,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 95,
+        "recommendedDan": [
+          7,
+          11,
+          18
+        ],
+        "actualFront": [
+          2,
+          11,
+          17,
+          22,
+          24
+        ],
+        "actualBack": [
+          7,
+          9
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 96,
+        "recommendedDan": [
+          10,
+          20,
+          22
+        ],
+        "actualFront": [
+          5,
+          24,
+          25,
+          32,
+          34
+        ],
+        "actualBack": [
+          1,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 97,
+        "recommendedDan": [
+          10,
+          11,
+          25
+        ],
+        "actualFront": [
+          1,
+          7,
+          9,
+          10,
+          23
+        ],
+        "actualBack": [
+          10,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 98,
+        "recommendedDan": [
+          2,
+          10,
+          29
+        ],
+        "actualFront": [
+          6,
+          12,
+          20,
+          26,
+          31
+        ],
+        "actualBack": [
+          2,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 99,
+        "recommendedDan": [
+          7,
+          12,
+          20
+        ],
+        "actualFront": [
+          26,
+          28,
+          32,
+          34,
+          35
+        ],
+        "actualBack": [
+          2,
+          7
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 100,
+        "recommendedDan": [
+          11,
+          22,
+          29
+        ],
+        "actualFront": [
+          5,
+          7,
+          19,
+          26,
+          32
+        ],
+        "actualBack": [
+          8,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 101,
+        "recommendedDan": [
+          12,
+          22,
+          25
+        ],
+        "actualFront": [
+          9,
+          10,
+          13,
+          26,
+          28
+        ],
+        "actualBack": [
+          2,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 102,
+        "recommendedDan": [
+          12,
+          20,
+          22
+        ],
+        "actualFront": [
+          5,
+          8,
+          19,
+          32,
+          34
+        ],
+        "actualBack": [
+          4,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 103,
+        "recommendedDan": [
+          10,
+          20,
+          29
+        ],
+        "actualFront": [
+          2,
+          6,
+          9,
+          22,
+          34
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 104,
+        "recommendedDan": [
+          7,
+          9,
+          22
+        ],
+        "actualFront": [
+          15,
+          16,
+          25,
+          28,
+          34
+        ],
+        "actualBack": [
+          10,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 105,
+        "recommendedDan": [
+          7,
+          25,
+          29
+        ],
+        "actualFront": [
+          5,
+          6,
+          11,
+          26,
+          29
+        ],
+        "actualBack": [
+          5,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 106,
+        "recommendedDan": [
+          9,
+          11,
+          20
+        ],
+        "actualFront": [
+          5,
+          7,
+          8,
+          15,
+          33
+        ],
+        "actualBack": [
+          6,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 107,
+        "recommendedDan": [
+          9,
+          20,
+          29
+        ],
+        "actualFront": [
+          14,
+          18,
+          21,
+          24,
+          29
+        ],
+        "actualBack": [
+          3,
+          6
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 108,
+        "recommendedDan": [
+          7,
+          10,
+          22
+        ],
+        "actualFront": [
+          4,
+          8,
+          10,
+          13,
+          26
+        ],
+        "actualBack": [
+          9,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 109,
+        "recommendedDan": [
+          5,
+          8,
+          11
+        ],
+        "actualFront": [
+          1,
+          15,
+          22,
+          30,
+          31
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 110,
+        "recommendedDan": [
+          5,
+          22,
+          29
+        ],
+        "actualFront": [
+          2,
+          9,
+          14,
+          21,
+          26
+        ],
+        "actualBack": [
+          2,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 111,
+        "recommendedDan": [
+          7,
+          22,
+          29
+        ],
+        "actualFront": [
+          3,
+          4,
+          21,
+          23,
+          24
+        ],
+        "actualBack": [
+          9,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 112,
+        "recommendedDan": [
+          9,
+          20,
+          29
+        ],
+        "actualFront": [
+          1,
+          14,
+          18,
+          28,
+          35
+        ],
+        "actualBack": [
+          2,
+          3
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 113,
+        "recommendedDan": [
+          10,
+          11,
+          29
+        ],
+        "actualFront": [
+          3,
+          8,
+          9,
+          12,
+          16
+        ],
+        "actualBack": [
+          1,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 114,
+        "recommendedDan": [
+          10,
+          11,
+          20
+        ],
+        "actualFront": [
+          3,
+          12,
+          14,
+          21,
+          35
+        ],
+        "actualBack": [
+          1,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 115,
+        "recommendedDan": [
+          8,
+          9,
+          22
+        ],
+        "actualFront": [
+          2,
+          6,
+          16,
+          22,
+          29
+        ],
+        "actualBack": [
+          8,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 116,
+        "recommendedDan": [
+          8,
+          20,
+          22
+        ],
+        "actualFront": [
+          5,
+          10,
+          18,
+          21,
+          29
+        ],
+        "actualBack": [
+          5,
+          7
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 117,
+        "recommendedDan": [
+          5,
+          9,
+          20
+        ],
+        "actualFront": [
+          2,
+          8,
+          9,
+          12,
+          21
+        ],
+        "actualBack": [
+          4,
+          5
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 118,
+        "recommendedDan": [
+          9,
+          20,
+          29
+        ],
+        "actualFront": [
+          8,
+          15,
+          27,
+          29,
+          31
+        ],
+        "actualBack": [
+          1,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 119,
+        "recommendedDan": [
+          10,
+          21,
+          29
+        ],
+        "actualFront": [
+          11,
+          13,
+          22,
+          26,
+          35
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 120,
+        "recommendedDan": [
+          10,
+          22,
+          29
+        ],
+        "actualFront": [
+          2,
+          3,
+          8,
+          13,
+          21
+        ],
+        "actualBack": [
+          7,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 121,
+        "recommendedDan": [
+          2,
+          9,
+          22
+        ],
+        "actualFront": [
+          2,
+          3,
+          6,
+          16,
+          17
+        ],
+        "actualBack": [
+          4,
+          5
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 122,
+        "recommendedDan": [
+          2,
+          20,
+          22
+        ],
+        "actualFront": [
+          8,
+          13,
+          24,
+          25,
+          31
+        ],
+        "actualBack": [
+          4,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 123,
+        "recommendedDan": [
+          20,
+          21,
+          29
+        ],
+        "actualFront": [
+          6,
+          9,
+          14,
+          26,
+          27
+        ],
+        "actualBack": [
+          8,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 124,
+        "recommendedDan": [
+          8,
+          10,
+          29
+        ],
+        "actualFront": [
+          10,
+          11,
+          13,
+          19,
+          35
+        ],
+        "actualBack": [
+          4,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 125,
+        "recommendedDan": [
+          8,
+          10,
+          22
+        ],
+        "actualFront": [
+          1,
+          8,
+          18,
+          27,
+          30
+        ],
+        "actualBack": [
+          6,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 126,
+        "recommendedDan": [
+          8,
+          10,
+          29
+        ],
+        "actualFront": [
+          4,
+          5,
+          19,
+          28,
+          29
+        ],
+        "actualBack": [
+          5,
+          8
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 127,
+        "recommendedDan": [
+          9,
+          21,
+          22
+        ],
+        "actualFront": [
+          3,
+          6,
+          26,
+          30,
+          33
+        ],
+        "actualBack": [
+          11,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 128,
+        "recommendedDan": [
+          9,
+          10,
+          29
+        ],
+        "actualFront": [
+          3,
+          9,
+          14,
+          28,
+          35
+        ],
+        "actualBack": [
+          2,
+          4
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 129,
+        "recommendedDan": [
+          8,
+          9,
+          29
+        ],
+        "actualFront": [
+          1,
+          13,
+          16,
+          27,
+          29
+        ],
+        "actualBack": [
+          2,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 130,
+        "recommendedDan": [
+          3,
+          8,
+          29
+        ],
+        "actualFront": [
+          3,
+          8,
+          25,
+          29,
+          32
+        ],
+        "actualBack": [
+          9,
+          12
+        ],
+        "danHits": 3,
+        "success": true
+      },
+      {
+        "period": 131,
+        "recommendedDan": [
+          2,
+          10,
+          22
+        ],
+        "actualFront": [
+          1,
+          9,
+          10,
+          12,
+          19
+        ],
+        "actualBack": [
+          6,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 132,
+        "recommendedDan": [
+          3,
+          8,
+          29
+        ],
+        "actualFront": [
+          4,
+          11,
+          23,
+          27,
+          35
+        ],
+        "actualBack": [
+          7,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 133,
+        "recommendedDan": [
+          3,
+          8,
+          29
+        ],
+        "actualFront": [
+          7,
+          12,
+          18,
+          27,
+          33
+        ],
+        "actualBack": [
+          9,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 134,
+        "recommendedDan": [
+          2,
+          11,
+          22
+        ],
+        "actualFront": [
+          2,
+          10,
+          16,
+          28,
+          32
+        ],
+        "actualBack": [
+          1,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 135,
+        "recommendedDan": [
+          9,
+          10,
+          11
+        ],
+        "actualFront": [
+          7,
+          11,
+          15,
+          16,
+          23
+        ],
+        "actualBack": [
+          9,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 136,
+        "recommendedDan": [
+          3,
+          9,
+          10
+        ],
+        "actualFront": [
+          7,
+          8,
+          9,
+          11,
+          22
+        ],
+        "actualBack": [
+          5,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 137,
+        "recommendedDan": [
+          8,
+          9,
+          10
+        ],
+        "actualFront": [
+          1,
+          3,
+          19,
+          21,
+          23
+        ],
+        "actualBack": [
+          7,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 138,
+        "recommendedDan": [
+          2,
+          3,
+          22
+        ],
+        "actualFront": [
+          8,
+          18,
+          22,
+          30,
+          35
+        ],
+        "actualBack": [
+          1,
+          4
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 139,
+        "recommendedDan": [
+          3,
+          9,
+          10
+        ],
+        "actualFront": [
+          4,
+          5,
+          13,
+          18,
+          34
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 140,
+        "recommendedDan": [
+          2,
+          3,
+          11
+        ],
+        "actualFront": [
+          4,
+          9,
+          24,
+          28,
+          29
+        ],
+        "actualBack": [
+          2,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 141,
+        "recommendedDan": [
+          3,
+          11,
+          29
+        ],
+        "actualFront": [
+          9,
+          10,
+          14,
+          27,
+          29
+        ],
+        "actualBack": [
+          2,
+          9
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 142,
+        "recommendedDan": [
+          8,
+          9,
+          11
+        ],
+        "actualFront": [
+          3,
+          4,
+          18,
+          24,
+          29
+        ],
+        "actualBack": [
+          7,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 143,
+        "recommendedDan": [
+          8,
+          9,
+          29
+        ],
+        "actualFront": [
+          2,
+          5,
+          13,
+          15,
+          28
+        ],
+        "actualBack": [
+          5,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 144,
+        "recommendedDan": [
+          2,
+          9,
+          10
+        ],
+        "actualFront": [
+          5,
+          7,
+          20,
+          22,
+          25
+        ],
+        "actualBack": [
+          4,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 145,
+        "recommendedDan": [
+          9,
+          10,
+          22
+        ],
+        "actualFront": [
+          6,
+          11,
+          13,
+          16,
+          22
+        ],
+        "actualBack": [
+          2,
+          3
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 146,
+        "recommendedDan": [
+          10,
+          11,
+          29
+        ],
+        "actualFront": [
+          6,
+          16,
+          21,
+          25,
+          33
+        ],
+        "actualBack": [
+          7,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 147,
+        "recommendedDan": [
+          3,
+          8,
+          29
+        ],
+        "actualFront": [
+          3,
+          4,
+          14,
+          30,
+          32
+        ],
+        "actualBack": [
+          8,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 148,
+        "recommendedDan": [
+          2,
+          3,
+          8
+        ],
+        "actualFront": [
+          24,
+          26,
+          30,
+          31,
+          32
+        ],
+        "actualBack": [
+          5,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 149,
+        "recommendedDan": [
+          3,
+          8,
+          29
+        ],
+        "actualFront": [
+          13,
+          14,
+          15,
+          28,
+          31
+        ],
+        "actualBack": [
+          1,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      }
+    ]
+  },
+  "balanced": {
+    "validPeriods": 100,
+    "totalDanHits": 42,
+    "avgDanHits": 0.42,
+    "successfulPeriods": 38,
+    "hitRate": 0.38,
+    "hitDistribution": {
+      "0": 62,
+      "1": 34,
+      "2": 4,
+      "3": 0
+    },
+    "periodResults": [
+      {
+        "period": 50,
+        "recommendedDan": [
+          5,
+          20,
+          21
+        ],
+        "actualFront": [
+          2,
+          4,
+          13,
+          29,
+          31
+        ],
+        "actualBack": [
+          5,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 51,
+        "recommendedDan": [
+          3,
+          22,
+          25
+        ],
+        "actualFront": [
+          2,
+          4,
+          11,
+          29,
+          30
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 52,
+        "recommendedDan": [
+          3,
+          21,
+          22
+        ],
+        "actualFront": [
+          14,
+          23,
+          29,
+          30,
+          33
+        ],
+        "actualBack": [
+          6,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 53,
+        "recommendedDan": [
+          21,
+          22,
+          25
+        ],
+        "actualFront": [
+          3,
+          12,
+          16,
+          21,
+          29
+        ],
+        "actualBack": [
+          1,
+          2
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 54,
+        "recommendedDan": [
+          3,
+          20,
+          29
+        ],
+        "actualFront": [
+          8,
+          10,
+          25,
+          29,
+          30
+        ],
+        "actualBack": [
+          1,
+          2
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 55,
+        "recommendedDan": [
+          7,
+          8,
+          22
+        ],
+        "actualFront": [
+          12,
+          15,
+          28,
+          29,
+          32
+        ],
+        "actualBack": [
+          8,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 56,
+        "recommendedDan": [
+          8,
+          20,
+          25
+        ],
+        "actualFront": [
+          9,
+          10,
+          11,
+          12,
+          29
+        ],
+        "actualBack": [
+          1,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 57,
+        "recommendedDan": [
+          8,
+          20,
+          29
+        ],
+        "actualFront": [
+          6,
+          11,
+          15,
+          21,
+          23
+        ],
+        "actualBack": [
+          1,
+          7
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 58,
+        "recommendedDan": [
+          20,
+          21,
+          25
+        ],
+        "actualFront": [
+          3,
+          9,
+          10,
+          11,
+          26
+        ],
+        "actualBack": [
+          1,
+          2
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 59,
+        "recommendedDan": [
+          8,
+          10,
+          20
+        ],
+        "actualFront": [
+          12,
+          14,
+          19,
+          33,
+          34
+        ],
+        "actualBack": [
+          1,
+          7
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 60,
+        "recommendedDan": [
+          11,
+          21,
+          22
+        ],
+        "actualFront": [
+          2,
+          11,
+          16,
+          23,
+          28
+        ],
+        "actualBack": [
+          5,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 61,
+        "recommendedDan": [
+          8,
+          10,
+          29
+        ],
+        "actualFront": [
+          14,
+          20,
+          27,
+          28,
+          29
+        ],
+        "actualBack": [
+          6,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 62,
+        "recommendedDan": [
+          20,
+          21,
+          22
+        ],
+        "actualFront": [
+          5,
+          18,
+          26,
+          29,
+          32
+        ],
+        "actualBack": [
+          7,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 63,
+        "recommendedDan": [
+          3,
+          8,
+          20
+        ],
+        "actualFront": [
+          5,
+          10,
+          18,
+          20,
+          34
+        ],
+        "actualBack": [
+          1,
+          8
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 64,
+        "recommendedDan": [
+          3,
+          5,
+          8
+        ],
+        "actualFront": [
+          7,
+          25,
+          32,
+          33,
+          35
+        ],
+        "actualBack": [
+          4,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 65,
+        "recommendedDan": [
+          5,
+          20,
+          29
+        ],
+        "actualFront": [
+          15,
+          18,
+          27,
+          28,
+          34
+        ],
+        "actualBack": [
+          3,
+          6
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 66,
+        "recommendedDan": [
+          3,
+          10,
+          21
+        ],
+        "actualFront": [
+          6,
+          10,
+          12,
+          21,
+          22
+        ],
+        "actualBack": [
+          1,
+          6
+        ],
+        "danHits": 2,
+        "success": true
+      },
+      {
+        "period": 67,
+        "recommendedDan": [
+          3,
+          22,
+          25
+        ],
+        "actualFront": [
+          1,
+          4,
+          17,
+          20,
+          22
+        ],
+        "actualBack": [
+          4,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 68,
+        "recommendedDan": [
+          20,
+          21,
+          29
+        ],
+        "actualFront": [
+          4,
+          6,
+          7,
+          33,
+          34
+        ],
+        "actualBack": [
+          9,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 69,
+        "recommendedDan": [
+          20,
+          21,
+          22
+        ],
+        "actualFront": [
+          8,
+          9,
+          15,
+          20,
+          22
+        ],
+        "actualBack": [
+          4,
+          12
+        ],
+        "danHits": 2,
+        "success": true
+      },
+      {
+        "period": 70,
+        "recommendedDan": [
+          10,
+          20,
+          29
+        ],
+        "actualFront": [
+          1,
+          8,
+          25,
+          31,
+          33
+        ],
+        "actualBack": [
+          5,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 71,
+        "recommendedDan": [
+          8,
+          22,
+          29
+        ],
+        "actualFront": [
+          4,
+          7,
+          15,
+          24,
+          29
+        ],
+        "actualBack": [
+          1,
+          4
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 72,
+        "recommendedDan": [
+          20,
+          21,
+          22
+        ],
+        "actualFront": [
+          1,
+          4,
+          17,
+          33,
+          34
+        ],
+        "actualBack": [
+          3,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 73,
+        "recommendedDan": [
+          3,
+          21,
+          22
+        ],
+        "actualFront": [
+          2,
+          11,
+          15,
+          18,
+          21
+        ],
+        "actualBack": [
+          5,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 74,
+        "recommendedDan": [
+          21,
+          22,
+          29
+        ],
+        "actualFront": [
+          8,
+          12,
+          16,
+          19,
+          35
+        ],
+        "actualBack": [
+          6,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 75,
+        "recommendedDan": [
+          20,
+          21,
+          22
+        ],
+        "actualFront": [
+          11,
+          18,
+          22,
+          25,
+          29
+        ],
+        "actualBack": [
+          4,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 76,
+        "recommendedDan": [
+          8,
+          11,
+          22
+        ],
+        "actualFront": [
+          12,
+          14,
+          16,
+          19,
+          28
+        ],
+        "actualBack": [
+          1,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 77,
+        "recommendedDan": [
+          8,
+          11,
+          20
+        ],
+        "actualFront": [
+          7,
+          10,
+          15,
+          21,
+          24
+        ],
+        "actualBack": [
+          5,
+          6
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 78,
+        "recommendedDan": [
+          8,
+          11,
+          29
+        ],
+        "actualFront": [
+          2,
+          14,
+          32,
+          34,
+          35
+        ],
+        "actualBack": [
+          5,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 79,
+        "recommendedDan": [
+          7,
+          11,
+          22
+        ],
+        "actualFront": [
+          9,
+          10,
+          18,
+          22,
+          24
+        ],
+        "actualBack": [
+          3,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 80,
+        "recommendedDan": [
+          7,
+          8,
+          21
+        ],
+        "actualFront": [
+          1,
+          4,
+          6,
+          15,
+          18
+        ],
+        "actualBack": [
+          2,
+          3
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 81,
+        "recommendedDan": [
+          7,
+          11,
+          21
+        ],
+        "actualFront": [
+          2,
+          3,
+          4,
+          12,
+          26
+        ],
+        "actualBack": [
+          1,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 82,
+        "recommendedDan": [
+          3,
+          21,
+          29
+        ],
+        "actualFront": [
+          12,
+          17,
+          18,
+          20,
+          34
+        ],
+        "actualBack": [
+          2,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 83,
+        "recommendedDan": [
+          20,
+          22,
+          29
+        ],
+        "actualFront": [
+          9,
+          11,
+          13,
+          18,
+          29
+        ],
+        "actualBack": [
+          4,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 84,
+        "recommendedDan": [
+          20,
+          21,
+          29
+        ],
+        "actualFront": [
+          2,
+          5,
+          9,
+          14,
+          33
+        ],
+        "actualBack": [
+          4,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 85,
+        "recommendedDan": [
+          20,
+          21,
+          29
+        ],
+        "actualFront": [
+          2,
+          6,
+          23,
+          24,
+          33
+        ],
+        "actualBack": [
+          1,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 86,
+        "recommendedDan": [
+          11,
+          12,
+          18
+        ],
+        "actualFront": [
+          5,
+          13,
+          14,
+          16,
+          20
+        ],
+        "actualBack": [
+          3,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 87,
+        "recommendedDan": [
+          12,
+          21,
+          22
+        ],
+        "actualFront": [
+          8,
+          9,
+          10,
+          11,
+          35
+        ],
+        "actualBack": [
+          5,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 88,
+        "recommendedDan": [
+          11,
+          12,
+          18
+        ],
+        "actualFront": [
+          2,
+          11,
+          12,
+          32,
+          34
+        ],
+        "actualBack": [
+          3,
+          10
+        ],
+        "danHits": 2,
+        "success": true
+      },
+      {
+        "period": 89,
+        "recommendedDan": [
+          2,
+          11,
+          20
+        ],
+        "actualFront": [
+          6,
+          14,
+          19,
+          22,
+          27
+        ],
+        "actualBack": [
+          1,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 90,
+        "recommendedDan": [
+          11,
+          18,
+          29
+        ],
+        "actualFront": [
+          1,
+          19,
+          22,
+          25,
+          27
+        ],
+        "actualBack": [
+          3,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 91,
+        "recommendedDan": [
+          2,
+          10,
+          22
+        ],
+        "actualFront": [
+          4,
+          10,
+          17,
+          25,
+          32
+        ],
+        "actualBack": [
+          5,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 92,
+        "recommendedDan": [
+          10,
+          18,
+          22
+        ],
+        "actualFront": [
+          1,
+          7,
+          9,
+          16,
+          30
+        ],
+        "actualBack": [
+          2,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 93,
+        "recommendedDan": [
+          20,
+          22,
+          29
+        ],
+        "actualFront": [
+          4,
+          9,
+          17,
+          30,
+          33
+        ],
+        "actualBack": [
+          5,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 94,
+        "recommendedDan": [
+          12,
+          18,
+          29
+        ],
+        "actualFront": [
+          7,
+          13,
+          14,
+          19,
+          27
+        ],
+        "actualBack": [
+          6,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 95,
+        "recommendedDan": [
+          11,
+          12,
+          18
+        ],
+        "actualFront": [
+          2,
+          11,
+          17,
+          22,
+          24
+        ],
+        "actualBack": [
+          7,
+          9
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 96,
+        "recommendedDan": [
+          7,
+          11,
+          20
+        ],
+        "actualFront": [
+          5,
+          24,
+          25,
+          32,
+          34
+        ],
+        "actualBack": [
+          1,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 97,
+        "recommendedDan": [
+          10,
+          11,
+          29
+        ],
+        "actualFront": [
+          1,
+          7,
+          9,
+          10,
+          23
+        ],
+        "actualBack": [
+          10,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 98,
+        "recommendedDan": [
+          2,
+          10,
+          29
+        ],
+        "actualFront": [
+          6,
+          12,
+          20,
+          26,
+          31
+        ],
+        "actualBack": [
+          2,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 99,
+        "recommendedDan": [
+          20,
+          22,
+          25
+        ],
+        "actualFront": [
+          26,
+          28,
+          32,
+          34,
+          35
+        ],
+        "actualBack": [
+          2,
+          7
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 100,
+        "recommendedDan": [
+          10,
+          20,
+          22
+        ],
+        "actualFront": [
+          5,
+          7,
+          19,
+          26,
+          32
+        ],
+        "actualBack": [
+          8,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 101,
+        "recommendedDan": [
+          11,
+          20,
+          25
+        ],
+        "actualFront": [
+          9,
+          10,
+          13,
+          26,
+          28
+        ],
+        "actualBack": [
+          2,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 102,
+        "recommendedDan": [
+          11,
+          22,
+          29
+        ],
+        "actualFront": [
+          5,
+          8,
+          19,
+          32,
+          34
+        ],
+        "actualBack": [
+          4,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 103,
+        "recommendedDan": [
+          9,
+          12,
+          20
+        ],
+        "actualFront": [
+          2,
+          6,
+          9,
+          22,
+          34
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 104,
+        "recommendedDan": [
+          2,
+          20,
+          29
+        ],
+        "actualFront": [
+          15,
+          16,
+          25,
+          28,
+          34
+        ],
+        "actualBack": [
+          10,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 105,
+        "recommendedDan": [
+          11,
+          20,
+          22
+        ],
+        "actualFront": [
+          5,
+          6,
+          11,
+          26,
+          29
+        ],
+        "actualBack": [
+          5,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 106,
+        "recommendedDan": [
+          7,
+          10,
+          25
+        ],
+        "actualFront": [
+          5,
+          7,
+          8,
+          15,
+          33
+        ],
+        "actualBack": [
+          6,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 107,
+        "recommendedDan": [
+          9,
+          11,
+          29
+        ],
+        "actualFront": [
+          14,
+          18,
+          21,
+          24,
+          29
+        ],
+        "actualBack": [
+          3,
+          6
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 108,
+        "recommendedDan": [
+          9,
+          10,
+          20
+        ],
+        "actualFront": [
+          4,
+          8,
+          10,
+          13,
+          26
+        ],
+        "actualBack": [
+          9,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 109,
+        "recommendedDan": [
+          5,
+          7,
+          10
+        ],
+        "actualFront": [
+          1,
+          15,
+          22,
+          30,
+          31
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 110,
+        "recommendedDan": [
+          7,
+          10,
+          20
+        ],
+        "actualFront": [
+          2,
+          9,
+          14,
+          21,
+          26
+        ],
+        "actualBack": [
+          2,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 111,
+        "recommendedDan": [
+          9,
+          11,
+          22
+        ],
+        "actualFront": [
+          3,
+          4,
+          21,
+          23,
+          24
+        ],
+        "actualBack": [
+          9,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 112,
+        "recommendedDan": [
+          2,
+          11,
+          29
+        ],
+        "actualFront": [
+          1,
+          14,
+          18,
+          28,
+          35
+        ],
+        "actualBack": [
+          2,
+          3
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 113,
+        "recommendedDan": [
+          2,
+          11,
+          20
+        ],
+        "actualFront": [
+          3,
+          8,
+          9,
+          12,
+          16
+        ],
+        "actualBack": [
+          1,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 114,
+        "recommendedDan": [
+          9,
+          10,
+          11
+        ],
+        "actualFront": [
+          3,
+          12,
+          14,
+          21,
+          35
+        ],
+        "actualBack": [
+          1,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 115,
+        "recommendedDan": [
+          7,
+          10,
+          20
+        ],
+        "actualFront": [
+          2,
+          6,
+          16,
+          22,
+          29
+        ],
+        "actualBack": [
+          8,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 116,
+        "recommendedDan": [
+          8,
+          22,
+          29
+        ],
+        "actualFront": [
+          5,
+          10,
+          18,
+          21,
+          29
+        ],
+        "actualBack": [
+          5,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 117,
+        "recommendedDan": [
+          9,
+          10,
+          29
+        ],
+        "actualFront": [
+          2,
+          8,
+          9,
+          12,
+          21
+        ],
+        "actualBack": [
+          4,
+          5
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 118,
+        "recommendedDan": [
+          2,
+          20,
+          21
+        ],
+        "actualFront": [
+          8,
+          15,
+          27,
+          29,
+          31
+        ],
+        "actualBack": [
+          1,
+          7
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 119,
+        "recommendedDan": [
+          2,
+          20,
+          21
+        ],
+        "actualFront": [
+          11,
+          13,
+          22,
+          26,
+          35
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 120,
+        "recommendedDan": [
+          8,
+          10,
+          22
+        ],
+        "actualFront": [
+          2,
+          3,
+          8,
+          13,
+          21
+        ],
+        "actualBack": [
+          7,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 121,
+        "recommendedDan": [
+          2,
+          10,
+          22
+        ],
+        "actualFront": [
+          2,
+          3,
+          6,
+          16,
+          17
+        ],
+        "actualBack": [
+          4,
+          5
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 122,
+        "recommendedDan": [
+          10,
+          21,
+          29
+        ],
+        "actualFront": [
+          8,
+          13,
+          24,
+          25,
+          31
+        ],
+        "actualBack": [
+          4,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 123,
+        "recommendedDan": [
+          8,
+          9,
+          29
+        ],
+        "actualFront": [
+          6,
+          9,
+          14,
+          26,
+          27
+        ],
+        "actualBack": [
+          8,
+          9
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 124,
+        "recommendedDan": [
+          2,
+          21,
+          22
+        ],
+        "actualFront": [
+          10,
+          11,
+          13,
+          19,
+          35
+        ],
+        "actualBack": [
+          4,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 125,
+        "recommendedDan": [
+          8,
+          10,
+          29
+        ],
+        "actualFront": [
+          1,
+          8,
+          18,
+          27,
+          30
+        ],
+        "actualBack": [
+          6,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 126,
+        "recommendedDan": [
+          2,
+          9,
+          22
+        ],
+        "actualFront": [
+          4,
+          5,
+          19,
+          28,
+          29
+        ],
+        "actualBack": [
+          5,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 127,
+        "recommendedDan": [
+          8,
+          9,
+          22
+        ],
+        "actualFront": [
+          3,
+          6,
+          26,
+          30,
+          33
+        ],
+        "actualBack": [
+          11,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 128,
+        "recommendedDan": [
+          8,
+          22,
+          29
+        ],
+        "actualFront": [
+          3,
+          9,
+          14,
+          28,
+          35
+        ],
+        "actualBack": [
+          2,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 129,
+        "recommendedDan": [
+          8,
+          10,
+          29
+        ],
+        "actualFront": [
+          1,
+          13,
+          16,
+          27,
+          29
+        ],
+        "actualBack": [
+          2,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 130,
+        "recommendedDan": [
+          9,
+          10,
+          22
+        ],
+        "actualFront": [
+          3,
+          8,
+          25,
+          29,
+          32
+        ],
+        "actualBack": [
+          9,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 131,
+        "recommendedDan": [
+          3,
+          10,
+          29
+        ],
+        "actualFront": [
+          1,
+          9,
+          10,
+          12,
+          19
+        ],
+        "actualBack": [
+          6,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 132,
+        "recommendedDan": [
+          8,
+          9,
+          29
+        ],
+        "actualFront": [
+          4,
+          11,
+          23,
+          27,
+          35
+        ],
+        "actualBack": [
+          7,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 133,
+        "recommendedDan": [
+          8,
+          9,
+          10
+        ],
+        "actualFront": [
+          7,
+          12,
+          18,
+          27,
+          33
+        ],
+        "actualBack": [
+          9,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 134,
+        "recommendedDan": [
+          8,
+          10,
+          29
+        ],
+        "actualFront": [
+          2,
+          10,
+          16,
+          28,
+          32
+        ],
+        "actualBack": [
+          1,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 135,
+        "recommendedDan": [
+          9,
+          22,
+          29
+        ],
+        "actualFront": [
+          7,
+          11,
+          15,
+          16,
+          23
+        ],
+        "actualBack": [
+          9,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 136,
+        "recommendedDan": [
+          2,
+          8,
+          10
+        ],
+        "actualFront": [
+          7,
+          8,
+          9,
+          11,
+          22
+        ],
+        "actualBack": [
+          5,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 137,
+        "recommendedDan": [
+          3,
+          10,
+          22
+        ],
+        "actualFront": [
+          1,
+          3,
+          19,
+          21,
+          23
+        ],
+        "actualBack": [
+          7,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 138,
+        "recommendedDan": [
+          3,
+          11,
+          22
+        ],
+        "actualFront": [
+          8,
+          18,
+          22,
+          30,
+          35
+        ],
+        "actualBack": [
+          1,
+          4
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 139,
+        "recommendedDan": [
+          2,
+          10,
+          11
+        ],
+        "actualFront": [
+          4,
+          5,
+          13,
+          18,
+          34
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 140,
+        "recommendedDan": [
+          2,
+          11,
+          29
+        ],
+        "actualFront": [
+          4,
+          9,
+          24,
+          28,
+          29
+        ],
+        "actualBack": [
+          2,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 141,
+        "recommendedDan": [
+          3,
+          8,
+          11
+        ],
+        "actualFront": [
+          9,
+          10,
+          14,
+          27,
+          29
+        ],
+        "actualBack": [
+          2,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 142,
+        "recommendedDan": [
+          3,
+          22,
+          29
+        ],
+        "actualFront": [
+          3,
+          4,
+          18,
+          24,
+          29
+        ],
+        "actualBack": [
+          7,
+          12
+        ],
+        "danHits": 2,
+        "success": true
+      },
+      {
+        "period": 143,
+        "recommendedDan": [
+          3,
+          8,
+          10
+        ],
+        "actualFront": [
+          2,
+          5,
+          13,
+          15,
+          28
+        ],
+        "actualBack": [
+          5,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 144,
+        "recommendedDan": [
+          9,
+          11,
+          22
+        ],
+        "actualFront": [
+          5,
+          7,
+          20,
+          22,
+          25
+        ],
+        "actualBack": [
+          4,
+          5
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 145,
+        "recommendedDan": [
+          2,
+          8,
+          29
+        ],
+        "actualFront": [
+          6,
+          11,
+          13,
+          16,
+          22
+        ],
+        "actualBack": [
+          2,
+          3
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 146,
+        "recommendedDan": [
+          2,
+          3,
+          22
+        ],
+        "actualFront": [
+          6,
+          16,
+          21,
+          25,
+          33
+        ],
+        "actualBack": [
+          7,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 147,
+        "recommendedDan": [
+          3,
+          9,
+          10
+        ],
+        "actualFront": [
+          3,
+          4,
+          14,
+          30,
+          32
+        ],
+        "actualBack": [
+          8,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 148,
+        "recommendedDan": [
+          2,
+          10,
+          29
+        ],
+        "actualFront": [
+          24,
+          26,
+          30,
+          31,
+          32
+        ],
+        "actualBack": [
+          5,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 149,
+        "recommendedDan": [
+          2,
+          3,
+          10
+        ],
+        "actualFront": [
+          13,
+          14,
+          15,
+          28,
+          31
+        ],
+        "actualBack": [
+          1,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      }
+    ]
+  },
+  "conservative": {
+    "validPeriods": 100,
+    "totalDanHits": 55,
+    "avgDanHits": 0.55,
+    "successfulPeriods": 50,
+    "hitRate": 0.5,
+    "hitDistribution": {
+      "0": 50,
+      "1": 45,
+      "2": 5,
+      "3": 0
+    },
+    "periodResults": [
+      {
+        "period": 50,
+        "recommendedDan": [
+          3,
+          5,
+          7
+        ],
+        "actualFront": [
+          2,
+          4,
+          13,
+          29,
+          31
+        ],
+        "actualBack": [
+          5,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 51,
+        "recommendedDan": [
+          7,
+          21,
+          25
+        ],
+        "actualFront": [
+          2,
+          4,
+          11,
+          29,
+          30
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 52,
+        "recommendedDan": [
+          7,
+          22,
+          25
+        ],
+        "actualFront": [
+          14,
+          23,
+          29,
+          30,
+          33
+        ],
+        "actualBack": [
+          6,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 53,
+        "recommendedDan": [
+          3,
+          20,
+          21
+        ],
+        "actualFront": [
+          3,
+          12,
+          16,
+          21,
+          29
+        ],
+        "actualBack": [
+          1,
+          2
+        ],
+        "danHits": 2,
+        "success": true
+      },
+      {
+        "period": 54,
+        "recommendedDan": [
+          7,
+          22,
+          29
+        ],
+        "actualFront": [
+          8,
+          10,
+          25,
+          29,
+          30
+        ],
+        "actualBack": [
+          1,
+          2
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 55,
+        "recommendedDan": [
+          3,
+          8,
+          29
+        ],
+        "actualFront": [
+          12,
+          15,
+          28,
+          29,
+          32
+        ],
+        "actualBack": [
+          8,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 56,
+        "recommendedDan": [
+          8,
+          22,
+          29
+        ],
+        "actualFront": [
+          9,
+          10,
+          11,
+          12,
+          29
+        ],
+        "actualBack": [
+          1,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 57,
+        "recommendedDan": [
+          10,
+          21,
+          29
+        ],
+        "actualFront": [
+          6,
+          11,
+          15,
+          21,
+          23
+        ],
+        "actualBack": [
+          1,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 58,
+        "recommendedDan": [
+          3,
+          20,
+          29
+        ],
+        "actualFront": [
+          3,
+          9,
+          10,
+          11,
+          26
+        ],
+        "actualBack": [
+          1,
+          2
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 59,
+        "recommendedDan": [
+          3,
+          11,
+          21
+        ],
+        "actualFront": [
+          12,
+          14,
+          19,
+          33,
+          34
+        ],
+        "actualBack": [
+          1,
+          7
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 60,
+        "recommendedDan": [
+          3,
+          8,
+          22
+        ],
+        "actualFront": [
+          2,
+          11,
+          16,
+          23,
+          28
+        ],
+        "actualBack": [
+          5,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 61,
+        "recommendedDan": [
+          10,
+          22,
+          29
+        ],
+        "actualFront": [
+          14,
+          20,
+          27,
+          28,
+          29
+        ],
+        "actualBack": [
+          6,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 62,
+        "recommendedDan": [
+          3,
+          10,
+          29
+        ],
+        "actualFront": [
+          5,
+          18,
+          26,
+          29,
+          32
+        ],
+        "actualBack": [
+          7,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 63,
+        "recommendedDan": [
+          8,
+          21,
+          22
+        ],
+        "actualFront": [
+          5,
+          10,
+          18,
+          20,
+          34
+        ],
+        "actualBack": [
+          1,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 64,
+        "recommendedDan": [
+          8,
+          20,
+          21
+        ],
+        "actualFront": [
+          7,
+          25,
+          32,
+          33,
+          35
+        ],
+        "actualBack": [
+          4,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 65,
+        "recommendedDan": [
+          5,
+          11,
+          20
+        ],
+        "actualFront": [
+          15,
+          18,
+          27,
+          28,
+          34
+        ],
+        "actualBack": [
+          3,
+          6
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 66,
+        "recommendedDan": [
+          11,
+          21,
+          28
+        ],
+        "actualFront": [
+          6,
+          10,
+          12,
+          21,
+          22
+        ],
+        "actualBack": [
+          1,
+          6
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 67,
+        "recommendedDan": [
+          3,
+          20,
+          25
+        ],
+        "actualFront": [
+          1,
+          4,
+          17,
+          20,
+          22
+        ],
+        "actualBack": [
+          4,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 68,
+        "recommendedDan": [
+          20,
+          22,
+          29
+        ],
+        "actualFront": [
+          4,
+          6,
+          7,
+          33,
+          34
+        ],
+        "actualBack": [
+          9,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 69,
+        "recommendedDan": [
+          20,
+          21,
+          29
+        ],
+        "actualFront": [
+          8,
+          9,
+          15,
+          20,
+          22
+        ],
+        "actualBack": [
+          4,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 70,
+        "recommendedDan": [
+          10,
+          21,
+          29
+        ],
+        "actualFront": [
+          1,
+          8,
+          25,
+          31,
+          33
+        ],
+        "actualBack": [
+          5,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 71,
+        "recommendedDan": [
+          3,
+          10,
+          22
+        ],
+        "actualFront": [
+          4,
+          7,
+          15,
+          24,
+          29
+        ],
+        "actualBack": [
+          1,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 72,
+        "recommendedDan": [
+          8,
+          20,
+          29
+        ],
+        "actualFront": [
+          1,
+          4,
+          17,
+          33,
+          34
+        ],
+        "actualBack": [
+          3,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 73,
+        "recommendedDan": [
+          10,
+          21,
+          22
+        ],
+        "actualFront": [
+          2,
+          11,
+          15,
+          18,
+          21
+        ],
+        "actualBack": [
+          5,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 74,
+        "recommendedDan": [
+          8,
+          20,
+          21
+        ],
+        "actualFront": [
+          8,
+          12,
+          16,
+          19,
+          35
+        ],
+        "actualBack": [
+          6,
+          9
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 75,
+        "recommendedDan": [
+          3,
+          21,
+          22
+        ],
+        "actualFront": [
+          11,
+          18,
+          22,
+          25,
+          29
+        ],
+        "actualBack": [
+          4,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 76,
+        "recommendedDan": [
+          11,
+          20,
+          21
+        ],
+        "actualFront": [
+          12,
+          14,
+          16,
+          19,
+          28
+        ],
+        "actualBack": [
+          1,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 77,
+        "recommendedDan": [
+          20,
+          22,
+          29
+        ],
+        "actualFront": [
+          7,
+          10,
+          15,
+          21,
+          24
+        ],
+        "actualBack": [
+          5,
+          6
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 78,
+        "recommendedDan": [
+          20,
+          22,
+          29
+        ],
+        "actualFront": [
+          2,
+          14,
+          32,
+          34,
+          35
+        ],
+        "actualBack": [
+          5,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 79,
+        "recommendedDan": [
+          8,
+          10,
+          11
+        ],
+        "actualFront": [
+          9,
+          10,
+          18,
+          22,
+          24
+        ],
+        "actualBack": [
+          3,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 80,
+        "recommendedDan": [
+          11,
+          20,
+          29
+        ],
+        "actualFront": [
+          1,
+          4,
+          6,
+          15,
+          18
+        ],
+        "actualBack": [
+          2,
+          3
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 81,
+        "recommendedDan": [
+          20,
+          21,
+          29
+        ],
+        "actualFront": [
+          2,
+          3,
+          4,
+          12,
+          26
+        ],
+        "actualBack": [
+          1,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 82,
+        "recommendedDan": [
+          8,
+          20,
+          29
+        ],
+        "actualFront": [
+          12,
+          17,
+          18,
+          20,
+          34
+        ],
+        "actualBack": [
+          2,
+          5
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 83,
+        "recommendedDan": [
+          3,
+          18,
+          21
+        ],
+        "actualFront": [
+          9,
+          11,
+          13,
+          18,
+          29
+        ],
+        "actualBack": [
+          4,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 84,
+        "recommendedDan": [
+          11,
+          18,
+          21
+        ],
+        "actualFront": [
+          2,
+          5,
+          9,
+          14,
+          33
+        ],
+        "actualBack": [
+          4,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 85,
+        "recommendedDan": [
+          12,
+          18,
+          22
+        ],
+        "actualFront": [
+          2,
+          6,
+          23,
+          24,
+          33
+        ],
+        "actualBack": [
+          1,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 86,
+        "recommendedDan": [
+          10,
+          18,
+          22
+        ],
+        "actualFront": [
+          5,
+          13,
+          14,
+          16,
+          20
+        ],
+        "actualBack": [
+          3,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 87,
+        "recommendedDan": [
+          10,
+          11,
+          29
+        ],
+        "actualFront": [
+          8,
+          9,
+          10,
+          11,
+          35
+        ],
+        "actualBack": [
+          5,
+          11
+        ],
+        "danHits": 2,
+        "success": true
+      },
+      {
+        "period": 88,
+        "recommendedDan": [
+          11,
+          18,
+          20
+        ],
+        "actualFront": [
+          2,
+          11,
+          12,
+          32,
+          34
+        ],
+        "actualBack": [
+          3,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 89,
+        "recommendedDan": [
+          2,
+          20,
+          22
+        ],
+        "actualFront": [
+          6,
+          14,
+          19,
+          22,
+          27
+        ],
+        "actualBack": [
+          1,
+          4
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 90,
+        "recommendedDan": [
+          12,
+          20,
+          29
+        ],
+        "actualFront": [
+          1,
+          19,
+          22,
+          25,
+          27
+        ],
+        "actualBack": [
+          3,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 91,
+        "recommendedDan": [
+          2,
+          22,
+          29
+        ],
+        "actualFront": [
+          4,
+          10,
+          17,
+          25,
+          32
+        ],
+        "actualBack": [
+          5,
+          7
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 92,
+        "recommendedDan": [
+          10,
+          11,
+          29
+        ],
+        "actualFront": [
+          1,
+          7,
+          9,
+          16,
+          30
+        ],
+        "actualBack": [
+          2,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 93,
+        "recommendedDan": [
+          20,
+          25,
+          29
+        ],
+        "actualFront": [
+          4,
+          9,
+          17,
+          30,
+          33
+        ],
+        "actualBack": [
+          5,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 94,
+        "recommendedDan": [
+          11,
+          20,
+          22
+        ],
+        "actualFront": [
+          7,
+          13,
+          14,
+          19,
+          27
+        ],
+        "actualBack": [
+          6,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 95,
+        "recommendedDan": [
+          10,
+          11,
+          22
+        ],
+        "actualFront": [
+          2,
+          11,
+          17,
+          22,
+          24
+        ],
+        "actualBack": [
+          7,
+          9
+        ],
+        "danHits": 2,
+        "success": true
+      },
+      {
+        "period": 96,
+        "recommendedDan": [
+          20,
+          22,
+          29
+        ],
+        "actualFront": [
+          5,
+          24,
+          25,
+          32,
+          34
+        ],
+        "actualBack": [
+          1,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 97,
+        "recommendedDan": [
+          2,
+          7,
+          20
+        ],
+        "actualFront": [
+          1,
+          7,
+          9,
+          10,
+          23
+        ],
+        "actualBack": [
+          10,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 98,
+        "recommendedDan": [
+          10,
+          11,
+          29
+        ],
+        "actualFront": [
+          6,
+          12,
+          20,
+          26,
+          31
+        ],
+        "actualBack": [
+          2,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 99,
+        "recommendedDan": [
+          12,
+          22,
+          29
+        ],
+        "actualFront": [
+          26,
+          28,
+          32,
+          34,
+          35
+        ],
+        "actualBack": [
+          2,
+          7
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 100,
+        "recommendedDan": [
+          10,
+          22,
+          25
+        ],
+        "actualFront": [
+          5,
+          7,
+          19,
+          26,
+          32
+        ],
+        "actualBack": [
+          8,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 101,
+        "recommendedDan": [
+          10,
+          20,
+          25
+        ],
+        "actualFront": [
+          9,
+          10,
+          13,
+          26,
+          28
+        ],
+        "actualBack": [
+          2,
+          4
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 102,
+        "recommendedDan": [
+          12,
+          20,
+          29
+        ],
+        "actualFront": [
+          5,
+          8,
+          19,
+          32,
+          34
+        ],
+        "actualBack": [
+          4,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 103,
+        "recommendedDan": [
+          9,
+          10,
+          22
+        ],
+        "actualFront": [
+          2,
+          6,
+          9,
+          22,
+          34
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 2,
+        "success": true
+      },
+      {
+        "period": 104,
+        "recommendedDan": [
+          2,
+          10,
+          22
+        ],
+        "actualFront": [
+          15,
+          16,
+          25,
+          28,
+          34
+        ],
+        "actualBack": [
+          10,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 105,
+        "recommendedDan": [
+          22,
+          25,
+          29
+        ],
+        "actualFront": [
+          5,
+          6,
+          11,
+          26,
+          29
+        ],
+        "actualBack": [
+          5,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 106,
+        "recommendedDan": [
+          22,
+          25,
+          29
+        ],
+        "actualFront": [
+          5,
+          7,
+          8,
+          15,
+          33
+        ],
+        "actualBack": [
+          6,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 107,
+        "recommendedDan": [
+          7,
+          11,
+          22
+        ],
+        "actualFront": [
+          14,
+          18,
+          21,
+          24,
+          29
+        ],
+        "actualBack": [
+          3,
+          6
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 108,
+        "recommendedDan": [
+          7,
+          10,
+          29
+        ],
+        "actualFront": [
+          4,
+          8,
+          10,
+          13,
+          26
+        ],
+        "actualBack": [
+          9,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 109,
+        "recommendedDan": [
+          7,
+          20,
+          22
+        ],
+        "actualFront": [
+          1,
+          15,
+          22,
+          30,
+          31
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 110,
+        "recommendedDan": [
+          8,
+          20,
+          22
+        ],
+        "actualFront": [
+          2,
+          9,
+          14,
+          21,
+          26
+        ],
+        "actualBack": [
+          2,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 111,
+        "recommendedDan": [
+          2,
+          7,
+          11
+        ],
+        "actualFront": [
+          3,
+          4,
+          21,
+          23,
+          24
+        ],
+        "actualBack": [
+          9,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 112,
+        "recommendedDan": [
+          2,
+          7,
+          10
+        ],
+        "actualFront": [
+          1,
+          14,
+          18,
+          28,
+          35
+        ],
+        "actualBack": [
+          2,
+          3
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 113,
+        "recommendedDan": [
+          9,
+          22,
+          29
+        ],
+        "actualFront": [
+          3,
+          8,
+          9,
+          12,
+          16
+        ],
+        "actualBack": [
+          1,
+          5
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 114,
+        "recommendedDan": [
+          7,
+          9,
+          10
+        ],
+        "actualFront": [
+          3,
+          12,
+          14,
+          21,
+          35
+        ],
+        "actualBack": [
+          1,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 115,
+        "recommendedDan": [
+          8,
+          20,
+          22
+        ],
+        "actualFront": [
+          2,
+          6,
+          16,
+          22,
+          29
+        ],
+        "actualBack": [
+          8,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 116,
+        "recommendedDan": [
+          2,
+          7,
+          29
+        ],
+        "actualFront": [
+          5,
+          10,
+          18,
+          21,
+          29
+        ],
+        "actualBack": [
+          5,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 117,
+        "recommendedDan": [
+          2,
+          20,
+          22
+        ],
+        "actualFront": [
+          2,
+          8,
+          9,
+          12,
+          21
+        ],
+        "actualBack": [
+          4,
+          5
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 118,
+        "recommendedDan": [
+          10,
+          22,
+          29
+        ],
+        "actualFront": [
+          8,
+          15,
+          27,
+          29,
+          31
+        ],
+        "actualBack": [
+          1,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 119,
+        "recommendedDan": [
+          8,
+          21,
+          22
+        ],
+        "actualFront": [
+          11,
+          13,
+          22,
+          26,
+          35
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 120,
+        "recommendedDan": [
+          9,
+          21,
+          22
+        ],
+        "actualFront": [
+          2,
+          3,
+          8,
+          13,
+          21
+        ],
+        "actualBack": [
+          7,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 121,
+        "recommendedDan": [
+          2,
+          20,
+          29
+        ],
+        "actualFront": [
+          2,
+          3,
+          6,
+          16,
+          17
+        ],
+        "actualBack": [
+          4,
+          5
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 122,
+        "recommendedDan": [
+          8,
+          10,
+          20
+        ],
+        "actualFront": [
+          8,
+          13,
+          24,
+          25,
+          31
+        ],
+        "actualBack": [
+          4,
+          10
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 123,
+        "recommendedDan": [
+          2,
+          8,
+          22
+        ],
+        "actualFront": [
+          6,
+          9,
+          14,
+          26,
+          27
+        ],
+        "actualBack": [
+          8,
+          9
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 124,
+        "recommendedDan": [
+          9,
+          10,
+          29
+        ],
+        "actualFront": [
+          10,
+          11,
+          13,
+          19,
+          35
+        ],
+        "actualBack": [
+          4,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 125,
+        "recommendedDan": [
+          8,
+          10,
+          29
+        ],
+        "actualFront": [
+          1,
+          8,
+          18,
+          27,
+          30
+        ],
+        "actualBack": [
+          6,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 126,
+        "recommendedDan": [
+          9,
+          21,
+          29
+        ],
+        "actualFront": [
+          4,
+          5,
+          19,
+          28,
+          29
+        ],
+        "actualBack": [
+          5,
+          8
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 127,
+        "recommendedDan": [
+          11,
+          21,
+          29
+        ],
+        "actualFront": [
+          3,
+          6,
+          26,
+          30,
+          33
+        ],
+        "actualBack": [
+          11,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 128,
+        "recommendedDan": [
+          6,
+          21,
+          22
+        ],
+        "actualFront": [
+          3,
+          9,
+          14,
+          28,
+          35
+        ],
+        "actualBack": [
+          2,
+          4
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 129,
+        "recommendedDan": [
+          3,
+          9,
+          29
+        ],
+        "actualFront": [
+          1,
+          13,
+          16,
+          27,
+          29
+        ],
+        "actualBack": [
+          2,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 130,
+        "recommendedDan": [
+          8,
+          9,
+          21
+        ],
+        "actualFront": [
+          3,
+          8,
+          25,
+          29,
+          32
+        ],
+        "actualBack": [
+          9,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 131,
+        "recommendedDan": [
+          21,
+          22,
+          29
+        ],
+        "actualFront": [
+          1,
+          9,
+          10,
+          12,
+          19
+        ],
+        "actualBack": [
+          6,
+          7
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 132,
+        "recommendedDan": [
+          3,
+          8,
+          9
+        ],
+        "actualFront": [
+          4,
+          11,
+          23,
+          27,
+          35
+        ],
+        "actualBack": [
+          7,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 133,
+        "recommendedDan": [
+          8,
+          11,
+          29
+        ],
+        "actualFront": [
+          7,
+          12,
+          18,
+          27,
+          33
+        ],
+        "actualBack": [
+          9,
+          10
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 134,
+        "recommendedDan": [
+          8,
+          9,
+          10
+        ],
+        "actualFront": [
+          2,
+          10,
+          16,
+          28,
+          32
+        ],
+        "actualBack": [
+          1,
+          7
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 135,
+        "recommendedDan": [
+          2,
+          9,
+          10
+        ],
+        "actualFront": [
+          7,
+          11,
+          15,
+          16,
+          23
+        ],
+        "actualBack": [
+          9,
+          11
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 136,
+        "recommendedDan": [
+          2,
+          11,
+          29
+        ],
+        "actualFront": [
+          7,
+          8,
+          9,
+          11,
+          22
+        ],
+        "actualBack": [
+          5,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 137,
+        "recommendedDan": [
+          3,
+          10,
+          22
+        ],
+        "actualFront": [
+          1,
+          3,
+          19,
+          21,
+          23
+        ],
+        "actualBack": [
+          7,
+          11
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 138,
+        "recommendedDan": [
+          10,
+          22,
+          29
+        ],
+        "actualFront": [
+          8,
+          18,
+          22,
+          30,
+          35
+        ],
+        "actualBack": [
+          1,
+          4
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 139,
+        "recommendedDan": [
+          3,
+          8,
+          22
+        ],
+        "actualFront": [
+          4,
+          5,
+          13,
+          18,
+          34
+        ],
+        "actualBack": [
+          2,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 140,
+        "recommendedDan": [
+          9,
+          22,
+          29
+        ],
+        "actualFront": [
+          4,
+          9,
+          24,
+          28,
+          29
+        ],
+        "actualBack": [
+          2,
+          10
+        ],
+        "danHits": 2,
+        "success": true
+      },
+      {
+        "period": 141,
+        "recommendedDan": [
+          2,
+          10,
+          11
+        ],
+        "actualFront": [
+          9,
+          10,
+          14,
+          27,
+          29
+        ],
+        "actualBack": [
+          2,
+          9
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 142,
+        "recommendedDan": [
+          8,
+          10,
+          29
+        ],
+        "actualFront": [
+          3,
+          4,
+          18,
+          24,
+          29
+        ],
+        "actualBack": [
+          7,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 143,
+        "recommendedDan": [
+          11,
+          18,
+          22
+        ],
+        "actualFront": [
+          2,
+          5,
+          13,
+          15,
+          28
+        ],
+        "actualBack": [
+          5,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 144,
+        "recommendedDan": [
+          2,
+          3,
+          11
+        ],
+        "actualFront": [
+          5,
+          7,
+          20,
+          22,
+          25
+        ],
+        "actualBack": [
+          4,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 145,
+        "recommendedDan": [
+          2,
+          11,
+          29
+        ],
+        "actualFront": [
+          6,
+          11,
+          13,
+          16,
+          22
+        ],
+        "actualBack": [
+          2,
+          3
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 146,
+        "recommendedDan": [
+          8,
+          9,
+          11
+        ],
+        "actualFront": [
+          6,
+          16,
+          21,
+          25,
+          33
+        ],
+        "actualBack": [
+          7,
+          8
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 147,
+        "recommendedDan": [
+          2,
+          3,
+          29
+        ],
+        "actualFront": [
+          3,
+          4,
+          14,
+          30,
+          32
+        ],
+        "actualBack": [
+          8,
+          12
+        ],
+        "danHits": 1,
+        "success": true
+      },
+      {
+        "period": 148,
+        "recommendedDan": [
+          8,
+          9,
+          11
+        ],
+        "actualFront": [
+          24,
+          26,
+          30,
+          31,
+          32
+        ],
+        "actualBack": [
+          5,
+          12
+        ],
+        "danHits": 0,
+        "success": false
+      },
+      {
+        "period": 149,
+        "recommendedDan": [
+          3,
+          11,
+          22
+        ],
+        "actualFront": [
+          13,
+          14,
+          15,
+          28,
+          31
+        ],
+        "actualBack": [
+          1,
+          5
+        ],
+        "danHits": 0,
+        "success": false
+      }
+    ]
+  }
+}
