@@ -2366,7 +2366,7 @@ function App() {
             <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px'}}>
               <div>
                 <label style={{fontSize: '0.85em', color: '#333'}}>近N期过热检测: </label>
-                <select value={eliminationOptions.recentPeriods} onChange={(e) => setEliminationOptions({...eliminationOptions, recentPeriods: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
+                <select value={eliminationOptions.recentPeriods} onChange={(e) => setEliminationOptions({...eliminationOptions, recentPeriods: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: '#ffffff', WebkitAppearance: 'none', appearance: 'none'}}>
                   <option value={3}>3期</option>
                   <option value={5}>5期</option>
                   <option value={8}>8期</option>
@@ -2378,7 +2378,7 @@ function App() {
               </div>
               <div>
                 <label style={{fontSize: '0.85em', color: '#333'}}>前区过热出现次数: </label>
-                <select value={eliminationOptions.overheatCount} onChange={(e) => setEliminationOptions({...eliminationOptions, overheatCount: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
+                <select value={eliminationOptions.overheatCount} onChange={(e) => setEliminationOptions({...eliminationOptions, overheatCount: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: '#ffffff', WebkitAppearance: 'none', appearance: 'none'}}>
                   <option value={2}>≥2次（短窗口用）</option>
                   <option value={3}>≥3次</option>
                   <option value={4}>≥4次</option>
@@ -2389,7 +2389,7 @@ function App() {
               </div>
               <div>
                 <label style={{fontSize: '0.85em', color: '#333'}}>后区过热出现次数: </label>
-                <select value={eliminationOptions.backOverheatCount} onChange={(e) => setEliminationOptions({...eliminationOptions, backOverheatCount: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
+                <select value={eliminationOptions.backOverheatCount} onChange={(e) => setEliminationOptions({...eliminationOptions, backOverheatCount: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: '#ffffff', WebkitAppearance: 'none', appearance: 'none'}}>
                   <option value={2}>≥2次（短窗口用）</option>
                   <option value={3}>≥3次</option>
                   <option value={4}>≥4次</option>
@@ -2400,7 +2400,7 @@ function App() {
               </div>
               <div>
                 <label style={{fontSize: '0.85em', color: '#333'}}>Z-score阈值: </label>
-                <select value={eliminationOptions.zScoreThreshold} onChange={(e) => setEliminationOptions({...eliminationOptions, zScoreThreshold: parseFloat(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
+                <select value={eliminationOptions.zScoreThreshold} onChange={(e) => setEliminationOptions({...eliminationOptions, zScoreThreshold: parseFloat(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: '#ffffff', WebkitAppearance: 'none', appearance: 'none'}}>
                   <option value={1.0}>1.0（宽松）</option>
                   <option value={1.5}>1.5（推荐）</option>
                   <option value={2.0}>2.0（严格）</option>
@@ -2408,7 +2408,7 @@ function App() {
               </div>
               <div>
                 <label style={{fontSize: '0.85em', color: '#333'}}>前区连续出现期数: </label>
-                <select value={eliminationOptions.consecutiveThreshold} onChange={(e) => setEliminationOptions({...eliminationOptions, consecutiveThreshold: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
+                <select value={eliminationOptions.consecutiveThreshold} onChange={(e) => setEliminationOptions({...eliminationOptions, consecutiveThreshold: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: '#ffffff', WebkitAppearance: 'none', appearance: 'none'}}>
                   <option value={2}>≥2期</option>
                   <option value={3}>≥3期（推荐）</option>
                   <option value={4}>≥4期</option>
@@ -2416,7 +2416,7 @@ function App() {
               </div>
               <div>
                 <label style={{fontSize: '0.85em', color: '#333'}}>后区连续出现期数: </label>
-                <select value={eliminationOptions.backConsecutiveThreshold} onChange={(e) => setEliminationOptions({...eliminationOptions, backConsecutiveThreshold: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
+                <select value={eliminationOptions.backConsecutiveThreshold} onChange={(e) => setEliminationOptions({...eliminationOptions, backConsecutiveThreshold: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: '#ffffff', WebkitAppearance: 'none', appearance: 'none'}}>
                   <option value={2}>≥2期（推荐，后区号码少）</option>
                   <option value={3}>≥3期</option>
                 </select>
@@ -2441,7 +2441,7 @@ function App() {
               <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px'}}>
                 <div>
                   <label style={{fontSize: '0.85em', color: '#333'}}>启用7区断区杀号: </label>
-                  <select value={structuralOptions.zoneBreakEnabled} onChange={(e) => setStructuralOptions({...structuralOptions, zoneBreakEnabled: e.target.value === 'true'})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
+                  <select value={structuralOptions.zoneBreakEnabled} onChange={(e) => setStructuralOptions({...structuralOptions, zoneBreakEnabled: e.target.value === 'true'})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: '#ffffff', WebkitAppearance: 'none', appearance: 'none'}}>
                     <option value="true">✅ 启用（推荐）</option>
                     <option value="false">❌ 禁用</option>
                   </select>
@@ -2451,7 +2451,7 @@ function App() {
                   <select value={`${structuralOptions.sumMin}-${structuralOptions.sumMax}`} onChange={(e) => {
                     const [min, max] = e.target.value.split('-').map(Number);
                     setStructuralOptions({...structuralOptions, sumMin: min, sumMax: max});
-                  }} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
+                  }} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: '#ffffff', WebkitAppearance: 'none', appearance: 'none'}}>
                     <option value="60-120">60-120（宽松）</option>
                     <option value="65-115">65-115（推荐）</option>
                     <option value="70-110">70-110（严格）</option>
@@ -2459,7 +2459,7 @@ function App() {
                 </div>
                 <div>
                   <label style={{fontSize: '0.85em', color: '#444'}}>重号杀号数量: </label>
-                  <select value={structuralOptions.repeatKillCount} onChange={(e) => setStructuralOptions({...structuralOptions, repeatKillCount: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
+                  <select value={structuralOptions.repeatKillCount} onChange={(e) => setStructuralOptions({...structuralOptions, repeatKillCount: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: '#ffffff', WebkitAppearance: 'none', appearance: 'none'}}>
                     <option value={2}>杀2个（保守）</option>
                     <option value={3}>杀3个（推荐）</option>
                     <option value={4}>杀4个（激进）</option>
@@ -2467,14 +2467,14 @@ function App() {
                 </div>
                 <div>
                   <label style={{fontSize: '0.85em', color: '#444'}}>启用尾数杀号: </label>
-                  <select value={structuralOptions.tailKillEnabled} onChange={(e) => setStructuralOptions({...structuralOptions, tailKillEnabled: e.target.value === 'true'})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
+                  <select value={structuralOptions.tailKillEnabled} onChange={(e) => setStructuralOptions({...structuralOptions, tailKillEnabled: e.target.value === 'true'})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: '#ffffff', WebkitAppearance: 'none', appearance: 'none'}}>
                     <option value="true">✅ 启用（推荐）</option>
                     <option value="false">❌ 禁用</option>
                   </select>
                 </div>
                 <div>
                   <label style={{fontSize: '0.85em', color: '#333'}}>热号检测期数: </label>
-                  <select value={structuralOptions.hotPeriods} onChange={(e) => setStructuralOptions({...structuralOptions, hotPeriods: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
+                  <select value={structuralOptions.hotPeriods} onChange={(e) => setStructuralOptions({...structuralOptions, hotPeriods: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: '#ffffff', WebkitAppearance: 'none', appearance: 'none'}}>
                     <option value={10}>10期（推荐）</option>
                     <option value={15}>15期</option>
                     <option value={20}>20期</option>
@@ -2482,7 +2482,7 @@ function App() {
                 </div>
                 <div>
                   <label style={{fontSize: '0.85em', color: '#333'}}>冷号检测期数: </label>
-                  <select value={structuralOptions.coldPeriods} onChange={(e) => setStructuralOptions({...structuralOptions, coldPeriods: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
+                  <select value={structuralOptions.coldPeriods} onChange={(e) => setStructuralOptions({...structuralOptions, coldPeriods: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: '#ffffff', WebkitAppearance: 'none', appearance: 'none'}}>
                     <option value={20}>20期（推荐）</option>
                     <option value={30}>30期</option>
                     <option value={40}>40期</option>

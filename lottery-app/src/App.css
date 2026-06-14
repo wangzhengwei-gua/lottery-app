@@ -4697,6 +4697,7 @@ button.success {
   .elimination-options {
     color: #333 !important;
     font-size: 0.9em !important;
+    background-color: #fff8f0 !important;
   }
   
   .elimination-options label {
@@ -4709,6 +4710,7 @@ button.success {
     color: #333 !important;
     -webkit-appearance: none !important;
     appearance: none !important;
+    border: 1px solid #ddd !important;
   }
   
   .elimination-options select option {
@@ -4720,6 +4722,7 @@ button.success {
   .elimination-summary {
     color: #333 !important;
     font-weight: 600 !important;
+    background-color: #e3f2fd !important;
   }
   
   /* 算法详情文字加深 */
@@ -4734,6 +4737,7 @@ button.success {
   /* 调试信息文字加深 */
   .debug-info {
     color: #333 !important;
+    background-color: #ffffff !important;
   }
   
   .debug-info li {
@@ -4768,6 +4772,7 @@ button.success {
   /* 480px断点也加深文字 */
   .elimination-options {
     color: #333 !important;
+    background-color: #fff8f0 !important;
   }
   
   .elimination-options label {
@@ -4777,10 +4782,12 @@ button.success {
   .elimination-options select {
     background-color: #ffffff !important;
     color: #333 !important;
+    border: 1px solid #ddd !important;
   }
   
   .elimination-summary {
     color: #333 !important;
+    background-color: #e3f2fd !important;
   }
   
   .elimination-algorithms {
@@ -4789,6 +4796,7 @@ button.success {
   
   .debug-info {
     color: #333 !important;
+    background-color: #ffffff !important;
   }
   
   .debug-info li {
