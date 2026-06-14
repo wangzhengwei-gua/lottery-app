@@ -67,7 +67,7 @@ function ModelRecommendationCard({ rec, info, formatNums }) {
           {expanded ? '收起' : '点击打开详情'}
         </button>
       </div>
-      <div style={{fontSize: '0.75em', color: '#999', marginBottom: '4px', marginLeft: '24px'}}>
+      <div style={{fontSize: '0.75em', color: '#555', marginBottom: '4px', marginLeft: '24px'}}>
         {nextDrawDateStr}开奖
       </div>
       <p className="back-rec-info" style={{fontWeight: '500'}}>
@@ -77,7 +77,7 @@ function ModelRecommendationCard({ rec, info, formatNums }) {
       </p>
       {expanded && (
         <div style={{marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #eee'}}>
-          <p className="back-rec-info" style={{fontSize: '0.85em', color: '#666', marginBottom: '6px'}}>
+          <p className="back-rec-info" style={{fontSize: '0.85em', color: '#444', marginBottom: '6px'}}>
             {rec.description}
           </p>
           {info.strengths && info.strengths.length > 0 && (
@@ -229,13 +229,14 @@ function App() {
   const [backDanNumbers, setBackDanNumbers] = useState([]); // 后区胆码
   const [backTuoNumbers, setBackTuoNumbers] = useState([]); // 后区拖码
   const [dantuoResult, setDantuoResult] = useState(null); // 胆拖结果
-  const [useDoubleZone, setUseDoubleZone] = useState(false); // 是否使用双区胆拖
   const [useBackFullDrag, setUseBackFullDrag] = useState(false); // 是否使用后区一胆全拖
   const [dantuoRecommendation, setDantuoRecommendation] = useState(null); // 胆拖推荐
   const [tuoCount, setTuoCount] = useState(10); // 前区拖码个数（默认10个）
   const [recommendStrategy, setRecommendStrategy] = useState('hot'); // 推荐策略: hot-热号, balanced-均衡, conservative-保守
   const [hasGeneratedToday, setHasGeneratedToday] = useState(false); // 今日是否已生成（用户主动操作）
-  const [useBackZoneDanTuo, setUseBackZoneDanTuo] = useState(false); // 前区胆拖模式下是否使用后区胆拖
+  const [backDanEnabled, setBackDanEnabled] = useState(false); // 是否启用后区胆码（默认关闭，纯拖模式）
+  const [backTuoCount, setBackTuoCount] = useState(2); // 后区拖码个数（默认2个）
+  const [danTuoBacktestResult, setDanTuoBacktestResult] = useState(null); // 胆拖回测结果
   const [selectionMode, setSelectionMode] = useState('dan'); // 选择模式: dan-胆码, tuo-拖码
   const [backSelectionMode, setBackSelectionMode] = useState('dan'); // 后区选择模式
   const [copyDanTuoSuccess, setCopyDanTuoSuccess] = useState(false); // 复制成功状态
@@ -580,20 +581,30 @@ function App() {
   // 胆拖玩法 - 生成组合
   const handleGenerateDanTuo = () => {
     if (danNumbers.length === 0 || tuoNumbers.length === 0) {
-      alert('请选择至少1个胆码和1个拖码！');
+      alert('请选择至少1个前区胆码和1个前区拖码！');
       return;
     }
 
     try {
       let result;
-      // 如果有后区胆拖号码（无论是否开启开关），都使用双区胆拖生成
-      if (backDanNumbers.length > 0 && backTuoNumbers.length > 0) {
-        result = analyzer.generateDoubleDanTuo({
-          frontDan: danNumbers,
-          frontTuo: tuoNumbers,
-          backDan: backDanNumbers,
-          backTuo: backTuoNumbers
-        });
+      if (backTuoNumbers.length > 0) {
+        if (backDanEnabled && backDanNumbers.length > 0) {
+          // 后区有胆码的常规胆拖模式
+          result = analyzer.generateDoubleDanTuo({
+            frontDan: danNumbers,
+            frontTuo: tuoNumbers,
+            backDan: backDanNumbers,
+            backTuo: backTuoNumbers
+          });
+        } else {
+          // 后区0胆纯拖模式
+          result = analyzer.generateDoubleDanTuo({
+            frontDan: danNumbers,
+            frontTuo: tuoNumbers,
+            backDan: [],
+            backTuo: backTuoNumbers
+          });
+        }
       } else {
         // 单区胆拖（仅前区）
         result = analyzer.generateDanTuo(danNumbers, tuoNumbers, 5);
@@ -643,6 +654,10 @@ function App() {
   };
 
   const toggleBackDanNumber = (num) => {
+    if (!backDanEnabled) {
+      alert('后区胆码已关闭，请开启胆码开关或选择拖码！');
+      return;
+    }
     if (backDanNumbers.includes(num)) {
       setBackDanNumbers(backDanNumbers.filter(n => n !== num));
     } else {
@@ -662,13 +677,13 @@ function App() {
     if (backTuoNumbers.includes(num)) {
       setBackTuoNumbers(backTuoNumbers.filter(n => n !== num));
     } else {
-      // 后区拖码数量检查：最多可以选择剩余的11个号码（12-1个胆码）
-      const maxBackTuoCount = 12 - backDanNumbers.length;
+      // 后区拖码数量检查：最多选择backTuoCount个
+      const maxBackTuoCount = backDanEnabled ? Math.min(backTuoCount, 12 - backDanNumbers.length) : Math.min(backTuoCount, 12);
       if (backTuoNumbers.length >= maxBackTuoCount) {
-        alert(`后区拖码最多选择${maxBackTuoCount}个（剩余所有号码）！`);
+        alert(`后区拖码最多选择${maxBackTuoCount}个！`);
         return;
       }
-      if (backDanNumbers.includes(num)) {
+      if (backDanEnabled && backDanNumbers.includes(num)) {
         alert('该号码已在后区胆码中，请先从胆码中移除！');
         return;
       }
@@ -696,12 +711,21 @@ function App() {
     
     let frontBets = combinations(tuoNumbers.length, needFromTuo);
     
-    // 如果有后区胆拖号码（无论是否开启开关），都计算后区注数
-    if (backDanNumbers.length > 0 && backTuoNumbers.length > 0) {
-      const backNeed = 2 - backDanNumbers.length;
-      if (backNeed > 0 && backNeed <= backTuoNumbers.length) {
-        const backBets = combinations(backTuoNumbers.length, backNeed);
-        return frontBets * backBets;
+    // 后区注数计算：适配0胆纯拖模式
+    if (backTuoNumbers.length > 0) {
+      if (backDanEnabled && backDanNumbers.length > 0) {
+        // 有胆码的常规胆拖模式
+        const backNeed = 2 - backDanNumbers.length;
+        if (backNeed > 0 && backNeed <= backTuoNumbers.length) {
+          const backBets = combinations(backTuoNumbers.length, backNeed);
+          return frontBets * backBets;
+        }
+      } else {
+        // 0胆纯拖模式：从拖码中选2个
+        if (backTuoNumbers.length >= 2) {
+          const backBets = combinations(backTuoNumbers.length, 2);
+          return frontBets * backBets;
+        }
       }
     }
     
@@ -711,7 +735,7 @@ function App() {
   // 复制当前选择的胆拖号码
   const handleCopyDanTuoSelection = () => {
     if (danNumbers.length === 0 || tuoNumbers.length === 0) {
-      alert('请先选择胆码和拖码！');
+      alert('请先选择前区胆码和拖码！');
       return;
     }
 
@@ -720,21 +744,24 @@ function App() {
     const tuoStr = tuoNumbers.map(n => n.toString().padStart(2, '0')).join(', ');
     
     // 构建复制文本
-    let copyText = `【前区胆拖】\n`;
+    let copyText = `【前区】\n`;
     copyText += `胆码：${danStr}\n`;
     copyText += `拖码：${tuoStr}\n`;
     copyText += `\n注数：${calculateDanTuoBets()}注`;
     
-    // 如果有后区胆拖
-    if (backDanNumbers.length > 0 || backTuoNumbers.length > 0) {
+    // 后区
+    if (backDanEnabled && backDanNumbers.length > 0 || backTuoNumbers.length > 0) {
       const backDanStr = backDanNumbers.map(n => n.toString().padStart(2, '0')).join(', ');
       const backTuoStr = backTuoNumbers.map(n => n.toString().padStart(2, '0')).join(', ');
-      copyText += `\n\n【后区胆拖】\n`;
-      if (backDanNumbers.length > 0) {
+      copyText += `\n\n【后区】\n`;
+      if (backDanEnabled && backDanNumbers.length > 0) {
         copyText += `胆码：${backDanStr}\n`;
       }
       if (backTuoNumbers.length > 0) {
         copyText += `拖码：${backTuoStr}\n`;
+      }
+      if (!backDanEnabled) {
+        copyText += `（纯拖模式，无胆码）\n`;
       }
     }
     
@@ -763,8 +790,8 @@ function App() {
     
     let recommendedDan, recommendedTuo, strategyName, description;
     // 后区胆拖号码（局部变量，覆盖state，确保旁白与显示一致）
-    let backDanNumbers = useDoubleZone ? [] : [];
-    let backTuoNumbers = useDoubleZone ? [] : [];
+    let backDanNumbers = [];
+    let backTuoNumbers = [];
     
     // ==================== 胆码智能推荐（FrontDanOptimizer + 降级备选）====================
     let frontDanProbInfo = [];
@@ -792,9 +819,11 @@ function App() {
         optimizedDan.push(...extraNums);
       }
       
-      // 拖码选择
+      // 拖码选择 - 优先使用用户配置的数量，但确保不超过最大可用数
       const allNumbers = Array.from({length: 35}, (_, i) => i + 1);
       const tuoCandidates = allNumbers.filter(n => !optimizedDan.includes(n));
+      const maxTuo = 35 - optimizedDan.length; // 最大可用拖码数量(4胆=31拖)
+      const actualTuoCount = Math.min(tuoCount, maxTuo); // 实际使用数量：取用户选择和最大值的较小者
       
       // ==================== 方案2：使用融合区间频率的拖码优化算法 ====================
       console.log(' 方案2：调用融合区间频率的拖码优化');
@@ -803,13 +832,13 @@ function App() {
         optimizedTuo = analyzer.optimizeTuoSelectionWithZoneFrequency(
           optimizedDan, 
           tuoCandidates, 
-          tuoCount,
+          actualTuoCount, // 使用实际拖码数量（用户选择或最大值中的较小者）
           strategy
         );
         console.log('✅ 方案2成功：拖码已基于区间频率优化');
       } catch (error) {
         console.warn('️ 方案2失败，降级到普通优化:', error);
-        optimizedTuo = analyzer.optimizeTuoSelection(optimizedDan, tuoCandidates, tuoCount);
+        optimizedTuo = analyzer.optimizeTuoSelection(optimizedDan, tuoCandidates, actualTuoCount);
       }
       
       // 使用优化后的胆拖组合
@@ -850,7 +879,27 @@ function App() {
     console.log('🎯 方案3：后区胆拖优化（多维度智能评分）');
             
     // 提取后区推荐逻辑到内部函数，避免代码冗余
-    const generateBackRecommendation = (isFullDrag) => {
+    const generateBackRecommendation = (isFullDrag, danEnabled) => {
+      if (!danEnabled) {
+        // 0胆纯拖模式：只推荐拖码，使用用户选择的拖码个数
+        const backTuoResult = BackTuoOptimizer.optimize(analyzer, [], backTuoCount, strategy);
+        const recommendedBackTuo = backTuoResult.selected;
+        const backTuoProbInfo = backTuoResult.probabilityInfo;
+            
+        setBackDanNumbers([]);
+        setBackTuoNumbers(recommendedBackTuo);
+            
+        const backTuoStr = recommendedBackTuo.map(n => n.toString().padStart(2, '0')).join(' ');
+        const tuoProbNote = backTuoProbInfo.slice(0, 3).map(p => 
+          `${p.number.toString().padStart(2, '0')}(${p.probability.toFixed(1)}%)`
+        ).join('、');
+            
+        const backDesc = `；后区纯拖：拖码${backTuoStr}（${recommendedBackTuo.length}个，C(${recommendedBackTuo.length},2)组合）`;
+        const backInfo = `推荐后区纯拖号码：${backTuoStr}。拖码概率排名：${tuoProbNote}等。从${recommendedBackTuo.length}个拖码中组合所有2码配对。`;
+            
+        return { backDesc, backInfo, recommendedBackDan: [], recommendedBackTuo, backDanProbInfo: [], backTuoProbInfo };
+      }
+      
       const backDanResult = BackDanOptimizer.optimize(analyzer, 1, strategy);
       const recommendedBackDan = backDanResult.selected;
       const backDanProbInfo = backDanResult.probabilityInfo;
@@ -863,8 +912,8 @@ function App() {
         recommendedBackTuo = Array.from({ length: 12 }, (_, i) => i + 1)
           .filter(n => !recommendedBackDan.includes(n));
       } else {
-        // 智能拖码选择（多维度评分+加权随机采样）
-        const backTuoResult = BackTuoOptimizer.optimize(analyzer, recommendedBackDan, 4, strategy);
+        // 智能拖码选择（多维度评分+加权随机采样，使用用户选择的拖码个数）
+        const backTuoResult = BackTuoOptimizer.optimize(analyzer, recommendedBackDan, backTuoCount, strategy);
         recommendedBackTuo = backTuoResult.selected;
         backTuoProbInfo = backTuoResult.probabilityInfo;
       }
@@ -900,8 +949,8 @@ function App() {
     };
         
     try {
-      const isFullDrag = useDoubleZone && useBackFullDrag;
-      const backRec = generateBackRecommendation(isFullDrag);
+      const isFullDrag = useBackFullDrag;
+      const backRec = generateBackRecommendation(isFullDrag, backDanEnabled);
       description += backRec.backDesc;
       backRecommendationInfo = backRec.backInfo;
       // 更新后区胆拖号码，确保旁白与显示一致
@@ -911,8 +960,8 @@ function App() {
     } catch (error) {
       console.warn('⚠️ 方案3失败，降级到基础策略:', error);
       try {
-        const isFullDrag = useDoubleZone && useBackFullDrag;
-        const backRec = generateBackRecommendation(isFullDrag);
+        const isFullDrag = useBackFullDrag;
+        const backRec = generateBackRecommendation(isFullDrag, backDanEnabled);
         description += backRec.backDesc;
         backRecommendationInfo = backRec.backInfo;
         // 更新后区胆拖号码，确保旁白与显示一致
@@ -923,19 +972,19 @@ function App() {
       }
     }
         
-    // 前区胆拖模式，不开启后区胆拖，也显示推荐的后区号码供参考
-    // 注意：不重复调用 generateBackRecommendation，避免加权随机采样导致旁白与显示不一致
-    if (!useDoubleZone && !useBackZoneDanTuo) {
-      backRecommendationInfo += ' 如果您想使用后区胆拖，可以开启"自选后区（胆拖）"开关。';
+    // 不开启后区胆码开关时，显示推荐的后区号码供参考
+    if (!backDanEnabled) {
+      backRecommendationInfo += ' 当前为纯拖模式（无胆码），后区所有号码从拖码中组合。如需使用胆码，请开启后区胆码开关。';
+    } else if (backDanNumbers.length === 0) {
+      backRecommendationInfo += ' 请先选择后区胆码，或点击智能推荐自动选取。';
     }
     
     // 生成推荐结果
     try {
       let result;
-      // 如果有后区胆拖号码（无论是否开启开关），都使用双区胆拖生成
-      if (backDanNumbers.length > 0 && backTuoNumbers.length > 0) {
-        if (useDoubleZone && useBackFullDrag) {
-          // 一胆全拖：胆码1个，拖码11个
+      if (backTuoNumbers.length > 0) {
+        if (backDanEnabled && backDanNumbers.length > 0) {
+          // 后区有胆码的常规胆拖模式
           result = analyzer.generateDoubleDanTuo({
             frontDan: recommendedDan,
             frontTuo: recommendedTuo,
@@ -943,21 +992,24 @@ function App() {
             backTuo: backTuoNumbers
           });
         } else {
+          // 后区0胆纯拖模式
           result = analyzer.generateDoubleDanTuo({
             frontDan: recommendedDan,
             frontTuo: recommendedTuo,
-            backDan: backDanNumbers,
+            backDan: [],
             backTuo: backTuoNumbers
           });
         }
       } else {
-        // 没有后区胆拖号码，只生成前区胆拖
+        // 没有后区号码，只生成前区胆拖
         result = analyzer.generateDanTuo(recommendedDan, recommendedTuo, 5);
       }
       
       // 组合质量后验验证 + 自动微调
       const frontForValidation = [...recommendedDan, ...recommendedTuo.slice(0, 5 - recommendedDan.length)];
-      const backForValidation = backDanNumbers.length > 0 ? [...backDanNumbers, ...backTuoNumbers.slice(0, 2)] : [];
+      const backForValidation = (backDanEnabled && backDanNumbers.length > 0) 
+        ? [...backDanNumbers, ...backTuoNumbers.slice(0, 2 - backDanNumbers.length)] 
+        : backTuoNumbers.length >= 2 ? backTuoNumbers.slice(0, 2) : [];
       let validationResult = null;
       let finalFront = frontForValidation;
       let finalBack = backForValidation.length >= 2 ? backForValidation : [];
@@ -1022,8 +1074,8 @@ function App() {
             setDantuoRecommendation({
         dan: recommendedDan,
         tuo: recommendedTuo,
-        backDan: (useDoubleZone || useBackZoneDanTuo) ? backDanNumbers : [],
-        backTuo: (useDoubleZone || useBackZoneDanTuo) ? backTuoNumbers : [],
+        backDan: backDanNumbers,
+        backTuo: backTuoNumbers,
         backRecommendationInfo: backRecommendationInfo, // 后区推荐信息（始终显示）
         frontDanProbInfo: frontDanProbInfo, // 前区胆码概率排名信息
         frontZoneInfo: frontZoneInfo, // 前区区间频率排名信息
@@ -1048,6 +1100,29 @@ function App() {
   };
 
   // 胆拖玩法 - 一键复制
+  // 胆拖回测验证
+  const handleDanTuoBacktest = () => {
+    try {
+      const result = analyzer.backtestDanTuo({
+        strategy: recommendStrategy,
+        danCount: danNumbers.length || 4,
+        tuoCount,
+        backDanEnabled,
+        backTuoCount,
+        backFullDrag: useBackFullDrag,
+        backtestPeriods: 20
+      });
+      setDanTuoBacktestResult(result);
+      if (result.success) {
+        console.log('✅ 胆拖回测完成:', result.summary);
+      } else {
+        console.warn('⚠️ 胆拖回测失败:', result.summary);
+      }
+    } catch (error) {
+      console.error('胆拖回测验证失败:', error);
+      alert('胆拖回测验证失败: ' + error.message);
+    }
+  };
   const handleCopyDanTuo = () => {
     if (!dantuoResult || dantuoResult.combinations.length === 0) {
       alert('请先生成胆拖组合！');
@@ -1063,9 +1138,14 @@ function App() {
     text += `胆码: [${dantuoResult.danNumbers.map(n => n.toString().padStart(2, '0')).join(', ')}]\n`;
     text += `拖码: [${dantuoResult.tuoNumbers.map(n => n.toString().padStart(2, '0')).join(', ')}]\n`;
     
-    if (useDoubleZone && backDanNumbers.length > 0) {
-      text += `后区胆码: [${backDanNumbers.map(n => n.toString().padStart(2, '0')).join(', ')}]\n`;
+    if (backTuoNumbers.length > 0) {
+      if (backDanEnabled && backDanNumbers.length > 0) {
+        text += `后区胆码: [${backDanNumbers.map(n => n.toString().padStart(2, '0')).join(', ')}]\n`;
+      }
       text += `后区拖码: [${backTuoNumbers.map(n => n.toString().padStart(2, '0')).join(', ')}]\n`;
+      if (!backDanEnabled) {
+        text += `后区模式: 纯拖（无胆码）\n`;
+      }
     }
     
     text += `\n【统计信息】\n`;
@@ -1578,6 +1658,8 @@ function App() {
                 cursor: 'pointer'
               }}
             >
+              <option value={6}>6个</option>
+              <option value={7}>7个</option>
               <option value={8}>8个</option>
               <option value={9}>9个</option>
               <option value={10}>10个（推荐）</option>
@@ -1586,57 +1668,95 @@ function App() {
               <option value={13}>13个</option>
               <option value={14}>14个</option>
               <option value={15}>15个</option>
+              <option value={16}>16个</option>
+              <option value={17}>17个</option>
+              <option value={18}>18个</option>
+              <option value={19}>19个</option>
+              <option value={20}>20个</option>
+              <option value={22}>22个</option>
+              <option value={24}>24个</option>
+              <option value={25}>25个</option>
+              <option value={28}>28个</option>
+              <option value={30}>30个</option>
+              <option value={31}>31个（全覆盖，推荐）</option>
             </select>
-            <span style={{ fontSize: '12px', color: '#666' }}>
+            <span style={{ fontSize: '12px', color: '#444' }}>
               注数：{tuoCount > 2 ? `C(${tuoCount},2) = ${tuoCount * (tuoCount - 1) / 2}注` : '请选择至少3个'}
             </span>
           </div>
           
-          {/* 模式切换 */}
-          <div className="dantuo-mode-toggle">
-            <button 
-              className={!useDoubleZone ? 'active' : ''}
-              onClick={() => setUseDoubleZone(false)}
-            >
-              前区胆拖
-            </button>
-            <button 
-              className={useDoubleZone ? 'active' : ''}
-              onClick={() => setUseDoubleZone(true)}
-            >
-              双区胆拖
-            </button>
-          </div>
-
-          {/* 前区胆拖模式下的后区选择开关 */}
-          {!useDoubleZone && (
-            <div className="dantuo-option-toggle">
-              <label className="option-switch">
-                <input 
-                  type="checkbox" 
-                  checked={useBackZoneDanTuo}
-                  onChange={(e) => setUseBackZoneDanTuo(e.target.checked)}
-                />
-                <span className="switch-slider"></span>
-                <span className="option-label">自选后区（胆拖）</span>
-              </label>
-            </div>
-          )}
-
-          {/* 后区一胆全拖开关（仅双区模式） */}
-          {useDoubleZone && (
-            <div className="dantuo-option-toggle">
-              <label className="option-switch">
+          {/* 后区设置栏：胆码开关 + 拖码个数 + 一胆全拖 */}
+          <div className="dantuo-option-bar" style={{
+            marginBottom: '15px',
+            padding: '12px 15px',
+            background: '#f8f0ff',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '15px',
+            flexWrap: 'wrap'
+          }}>
+            <label className="option-switch" style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+              <input 
+                type="checkbox" 
+                checked={backDanEnabled}
+                onChange={(e) => {
+                  setBackDanEnabled(e.target.checked);
+                  if (!e.target.checked) {
+                    // 关闭胆码时清空已选胆码
+                    setBackDanNumbers([]);
+                    setBackSelectionMode('tuo');
+                  }
+                }}
+              />
+              <span className="switch-slider"></span>
+              <span className="option-label">🎯 后区胆码</span>
+            </label>
+            <label style={{ fontWeight: 'bold', color: '#333', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              📊 后区拖码个数：
+              <select 
+                value={backTuoCount}
+                onChange={(e) => setBackTuoCount(parseInt(e.target.value))}
+                disabled={useBackFullDrag}
+                style={{
+                  padding: '4px 8px',
+                  border: `2px solid ${useBackFullDrag ? '#ccc' : '#66bb6a'}`,
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  color: useBackFullDrag ? '#999' : '#66bb6a',
+                  cursor: useBackFullDrag ? 'not-allowed' : 'pointer'
+                }}
+              >
+                <option value={2}>2个</option>
+                <option value={3}>3个</option>
+                <option value={4}>4个（推荐）</option>
+                <option value={5}>5个</option>
+                <option value={6}>6个</option>
+                <option value={7}>7个</option>
+                <option value={8}>8个</option>
+                <option value={9}>9个</option>
+                <option value={10}>10个</option>
+                <option value={11}>11个（一胆全拖）</option>
+              </select>
+            </label>
+            {backDanEnabled && (
+              <label className="option-switch" style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
                 <input 
                   type="checkbox" 
                   checked={useBackFullDrag}
-                  onChange={(e) => setUseBackFullDrag(e.target.checked)}
+                  onChange={(e) => {
+                    setUseBackFullDrag(e.target.checked);
+                    if (e.target.checked) {
+                      setBackTuoCount(11);
+                    }
+                  }}
                 />
                 <span className="switch-slider"></span>
-                <span className="option-label">后区一胆全拖（胆码1个，拖码11个）</span>
+                <span className="option-label">⚡ 一胆全拖</span>
               </label>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* 智能推荐策略选择 */}
           <div className="strategy-selector">
@@ -1644,7 +1764,7 @@ function App() {
             <span className="data-window-hint" style={{fontSize: '0.85em', color: '#667eea', marginLeft: '10px'}}>
               📊 统计分析窗口: {dataWindow > 0 ? `${dataWindow}期` : '全部'} | 智能推荐: 近30期
             </span>
-            <div className="strategy-desc" style={{fontSize: '0.82em', color: '#888', margin: '6px 0 2px 0', lineHeight: '1.6'}}>
+            <div className="strategy-desc" style={{fontSize: '0.82em', color: '#555', margin: '6px 0 2px 0', lineHeight: '1.6'}}>
               🔥 热号策略：追热号趋势 | ⚖️ 均衡策略：追均值回归 | 🛡️ 保守策略：追冷号回归（多维确认）
             </div>
             <button 
@@ -1742,15 +1862,16 @@ function App() {
             </div>
           </div>
 
-          {/* 后区选择（双区模式或前区胆拖+后区胆拖） */}
-          {(useDoubleZone || useBackZoneDanTuo) && (
+          {/* 后区选择（始终显示） */}
+
             <div className="dantuo-zone back-zone back-zone-compact">
               <h3>后区号码 (1-12)</h3>
               
               <div className="back-zone-content">
                 {/* 左侧：已选号码 */}
                 <div className="back-selected">
-                  {/* 后区胆码 */}
+                  {/* 后区胆码（仅当开启时显示） */}
+                  {backDanEnabled && (
                   <div className="number-selection compact">
                     <div className="selection-label">
                       <span className="label-text">胆码</span>
@@ -1765,12 +1886,13 @@ function App() {
                       {backDanNumbers.length === 0 && <span className="placeholder small">未选</span>}
                     </div>
                   </div>
+                  )}
 
                   {/* 后区拖码 */}
                   <div className="number-selection compact">
                     <div className="selection-label">
-                      <span className="label-text">拖码</span>
-                      <span className="label-count">{backTuoNumbers.length}/{12 - backDanNumbers.length}</span>
+                      <span className="label-text">拖码 {!backDanEnabled && <span style={{fontSize: '0.75em', color: '#e67e22', fontWeight: 'normal'}}>(纯拖模式)</span>}</span>
+                      <span className="label-count">{backTuoNumbers.length}/{backDanEnabled ? (12 - backDanNumbers.length) : 12}</span>
                     </div>
                     <div className="selected-numbers tuo-numbers compact">
                       {backTuoNumbers.map(num => (
@@ -1784,12 +1906,14 @@ function App() {
 
                   {/* 后区选择模式切换 */}
                   <div className="selection-mode-toggle compact">
+                    {backDanEnabled && (
                     <button
                       className={`mode-btn ${backSelectionMode === 'dan' ? 'active dan-mode' : ''}`}
                       onClick={() => setBackSelectionMode('dan')}
                     >
                       🎯 胆
                     </button>
+                    )}
                     <button
                       className={`mode-btn ${backSelectionMode === 'tuo' ? 'active tuo-mode' : ''}`}
                       onClick={() => setBackSelectionMode('tuo')}
@@ -1803,7 +1927,7 @@ function App() {
                 <div className="back-picker">
                   <div className="number-picker compact">
                     {Array.from({ length: 12 }, (_, i) => i + 1).map(num => {
-                      const isDan = backDanNumbers.includes(num);
+                      const isDan = backDanEnabled && backDanNumbers.includes(num);
                       const isTuo = backTuoNumbers.includes(num);
                       return (
                         <button
@@ -1812,7 +1936,7 @@ function App() {
                           onClick={() => {
                             if (isDan) toggleBackDanNumber(num);
                             else if (isTuo) toggleBackTuoNumber(num);
-                            else if (backSelectionMode === 'dan') toggleBackDanNumber(num);
+                            else if (backDanEnabled && backSelectionMode === 'dan') toggleBackDanNumber(num);
                             else toggleBackTuoNumber(num);
                           }}
                         >
@@ -1824,7 +1948,6 @@ function App() {
                 </div>
               </div>
             </div>
-          )}
 
           {/* 预览和生成按钮 */}
           <div className="dantuo-preview">
@@ -1875,10 +1998,85 @@ function App() {
               >
                 生成组合
               </button>
+              <button
+                onClick={handleDanTuoBacktest}
+                style={{
+                  background: 'linear-gradient(135deg, #17a2b8, #138496)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '10px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '13px',
+                  transition: 'all 0.3s',
+                  marginLeft: '10px'
+                }}
+              >
+                📊 回测验证
+              </button>
             </div>
           </div>
 
-          {/* 推荐提示 */}
+          {/* 胆拖回测结果展示 */}
+          {danTuoBacktestResult && danTuoBacktestResult.success && (
+            <div style={{
+              marginTop: '15px',
+              padding: '15px',
+              background: 'linear-gradient(135deg, #e8f4f8, #d6eaf8)',
+              borderRadius: '8px',
+              border: '1px solid #5dade2'
+            }}>
+              <div style={{fontWeight: 'bold', color: '#17a2b8', marginBottom: '10px', fontSize: '1.0em'}}>
+                胆拖回测结果（{danTuoBacktestResult.strategy} · {danTuoBacktestResult.backMode} · {danTuoBacktestResult.danCount}胆+{danTuoBacktestResult.tuoCount}拖）
+              </div>
+              <div style={{fontSize: '0.85em', color: '#333', marginBottom: '8px'}}>
+                {danTuoBacktestResult.summary}
+              </div>
+              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '8px', marginBottom: '10px'}}>
+                <div style={{textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ddd'}}>
+                  <div style={{fontSize: '0.75em', color: '#444'}}>前区胆码命中</div>
+                  <div style={{fontWeight: 'bold', color: '#27ae60', fontSize: '1.2em'}}>{danTuoBacktestResult.avgDanHits.toFixed(2)}个/期</div>
+                  <div style={{fontSize: '0.7em', color: '#555'}}>期望{danTuoBacktestResult.randomDanExpect.toFixed(2)}</div>
+                </div>
+                <div style={{textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ddd'}}>
+                  <div style={{fontSize: '0.75em', color: '#444'}}>胆码命中≥1概率</div>
+                  <div style={{fontWeight: 'bold', color: '#e67e22', fontSize: '1.2em'}}>{(danTuoBacktestResult.danAtLeast1Rate * 100).toFixed(1)}%</div>
+                </div>
+                <div style={{textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ddd'}}>
+                  <div style={{fontSize: '0.75em', color: '#444'}}>号码池命中</div>
+                  <div style={{fontWeight: 'bold', color: '#2980b9', fontSize: '1.2em'}}>{danTuoBacktestResult.avgFrontPoolHits.toFixed(2)}个/期</div>
+                </div>
+                <div style={{textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ddd'}}>
+                  <div style={{fontSize: '0.75em', color: '#444'}}>后区命中</div>
+                  <div style={{fontWeight: 'bold', color: '#27ae60', fontSize: '1.2em'}}>{danTuoBacktestResult.avgBackHits.toFixed(2)}个/期</div>
+                  <div style={{fontSize: '0.7em', color: '#555'}}>期望{danTuoBacktestResult.randomBackExpect.toFixed(2)}</div>
+                </div>
+                <div style={{textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ddd'}}>
+                  <div style={{fontSize: '0.75em', color: '#444'}}>回测期数</div>
+                  <div style={{fontWeight: 'bold', color: '#17a2b8', fontSize: '1.2em'}}>{danTuoBacktestResult.totalPeriods}期</div>
+                </div>
+              </div>
+              {/* 最近5期回测明细 */}
+              <div style={{fontSize: '0.8em', color: '#444', marginBottom: '4px'}}>最近5期回测明细:</div>
+              {danTuoBacktestResult.details.slice(-5).reverse().map((detail, idx) => (
+                <div key={idx} style={{padding: '6px 8px', borderBottom: '1px solid #ddd', fontSize: '0.75em', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap'}}>
+                  <div>第{detail.periodIndex}期: 开奖 [{detail.actualDraw.front.join(' ')} + {detail.actualDraw.back.join(' ')}]</div>
+                  <div style={{display: 'flex', gap: '8px'}}>
+                    <span style={{color: detail.frontDanHits > 0 ? '#27ae60' : '#999'}}>
+                      胆码命中{detail.frontDanHits}/{danTuoBacktestResult.danCount}
+                    </span>
+                    <span style={{color: detail.frontAllHits > 2 ? '#27ae60' : '#e67e22'}}>
+                      号码池命中{detail.frontAllHits}/{danTuoBacktestResult.danCount + danTuoBacktestResult.tuoCount}
+                    </span>
+                    <span style={{color: detail.backAllHits > 0 ? '#27ae60' : '#999'}}>
+                      后区命中{detail.backAllHits}/2
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           {dantuoRecommendation && (
             <div className="recommendation-tip">
               <div className="tip-header">
@@ -1914,7 +2112,7 @@ function App() {
                   </p>
                 </div>
               )}
-              {(useDoubleZone || useBackZoneDanTuo) && dantuoRecommendation.backDan && dantuoRecommendation.backDan.length > 0 && (
+              {dantuoRecommendation.backDan && dantuoRecommendation.backDan.length > 0 && (
                 <div className="tip-numbers">
                   <span>后区胆码: </span>
                   <strong>{dantuoRecommendation.backDan.map(n => n.toString().padStart(2, '0')).join(', ')}</strong>
@@ -1975,7 +2173,7 @@ function App() {
                 <span className="tip-icon">🧪</span>
                 <span className="tip-title">辅助模型推荐（仅供参考）</span>
               </div>
-              <p className="tip-description" style={{fontSize: '0.8em', color: '#888', marginBottom: '8px'}}>
+              <p className="tip-description" style={{fontSize: '0.8em', color: '#555', marginBottom: '8px'}}>
                 以下3个模型独立于主推荐算法，各模型基于不同理论，推荐结果仅供参考对比。
               </p>
               {['bayesian', 'normal', 'zhouyi'].map(modelKey => {
@@ -2065,7 +2263,7 @@ function App() {
         {/* 复式玩法 */}
         <section className="card fushi-section">
           <h2>🚫 复式玩法 - 杀号+小型套餐</h2>
-          <p style={{fontSize: '0.85em', color: '#888', marginBottom: '10px'}}>
+          <p style={{fontSize: '0.85em', color: '#333', marginBottom: '10px'}}>
             先杀掉过热号码（近30期出现过多→热度可能下降），再从剩余号码中选一个小型套餐自动填充最优号码，生成所有复式组合。
           </p>
 
@@ -2109,9 +2307,9 @@ function App() {
                     minWidth: '120px',
                     padding: '8px 6px',
                     borderRadius: '8px',
-                    border: (eliminationOptions.mode || 'basic') === m.key ? `2px solid ${m.color}` : '1px solid #ddd',
-                    background: (eliminationOptions.mode || 'basic') === m.key ? `rgba(${m.color === '#e74c3c' ? '231,76,60' : m.color === '#2e7d32' ? '46,125,50' : m.color === '#8e44ad' ? '142,68,173' : '41,128,190'},0.12)` : '#fff',
-                    color: (eliminationOptions.mode || 'basic') === m.key ? m.color : '#666',
+                    border: (eliminationOptions.mode || 'basic') === m.key ? `2px solid ${m.color}` : '1px solid #ccc',
+                    background: (eliminationOptions.mode || 'basic') === m.key ? `rgba(${m.color === '#e74c3c' ? '231,76,60' : m.color === '#2e7d32' ? '46,125,50' : m.color === '#8e44ad' ? '142,68,173' : '41,128,190'},0.15)` : '#f9f9f9',
+                    color: (eliminationOptions.mode || 'basic') === m.key ? m.color : '#333',
                     cursor: 'pointer',
                     fontWeight: (eliminationOptions.mode || 'basic') === m.key ? 'bold' : 'normal',
                     transition: 'all 0.2s',
@@ -2120,7 +2318,7 @@ function App() {
                   }}
                 >
                   {m.emoji} {m.label}<br/>
-                  <span style={{fontSize: '0.75em', opacity: 0.8}}>{m.desc}</span>
+                  <span style={{fontSize: '0.75em', opacity: 0.9, color: '#555'}}>{m.desc}</span>
                 </button>
               ))}
             </div>
@@ -2145,8 +2343,8 @@ function App() {
             {recommendResult && (
               <div style={{marginTop: '8px', padding: '10px', background: '#fff3cd', borderRadius: '6px', border: '1px solid #f39c12', fontSize: '0.85em'}}>
                 <div style={{fontWeight: 'bold', color: '#e67e22'}}>推荐结果: {recommendResult.modeNames[recommendResult.recommendedMode]}</div>
-                <div style={{color: '#666', marginTop: '4px'}}>{recommendResult.reason}</div>
-                <div style={{color: '#999', marginTop: '4px', fontSize: '0.8em'}}>
+                <div style={{color: '#444', marginTop: '4px'}}>{recommendResult.reason}</div>
+                <div style={{color: '#555', marginTop: '4px', fontSize: '0.8em'}}>
                   各模式评分: 基础{recommendResult.scores.basic} / 结构{recommendResult.scores.structural} / 并集{recommendResult.scores.mixed_union} / 交集{recommendResult.scores.mixed_intersect}
                 </div>
               </div>
@@ -2162,10 +2360,10 @@ function App() {
             border: '1px solid #ffecd2'
           }}>
             <div style={{fontWeight: 'bold', color: '#e67e22', marginBottom: '8px'}}>⚙️ 杀号参数配置</div>
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px'}}>
               <div>
-                <label style={{fontSize: '0.85em', color: '#666'}}>近N期过热检测: </label>
-                <select value={eliminationOptions.recentPeriods} onChange={(e) => setEliminationOptions({...eliminationOptions, recentPeriods: parseInt(e.target.value)})} style={{padding: '4px 8px', borderRadius: '4px', border: '1px solid #ddd'}}>
+                <label style={{fontSize: '0.85em', color: '#333'}}>近N期过热检测: </label>
+                <select value={eliminationOptions.recentPeriods} onChange={(e) => setEliminationOptions({...eliminationOptions, recentPeriods: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
                   <option value={3}>3期</option>
                   <option value={5}>5期</option>
                   <option value={8}>8期</option>
@@ -2176,8 +2374,8 @@ function App() {
                 </select>
               </div>
               <div>
-                <label style={{fontSize: '0.85em', color: '#666'}}>前区过热出现次数: </label>
-                <select value={eliminationOptions.overheatCount} onChange={(e) => setEliminationOptions({...eliminationOptions, overheatCount: parseInt(e.target.value)})} style={{padding: '4px 8px', borderRadius: '4px', border: '1px solid #ddd'}}>
+                <label style={{fontSize: '0.85em', color: '#333'}}>前区过热出现次数: </label>
+                <select value={eliminationOptions.overheatCount} onChange={(e) => setEliminationOptions({...eliminationOptions, overheatCount: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
                   <option value={2}>≥2次（短窗口用）</option>
                   <option value={3}>≥3次</option>
                   <option value={4}>≥4次</option>
@@ -2187,8 +2385,8 @@ function App() {
                 </select>
               </div>
               <div>
-                <label style={{fontSize: '0.85em', color: '#666'}}>后区过热出现次数: </label>
-                <select value={eliminationOptions.backOverheatCount} onChange={(e) => setEliminationOptions({...eliminationOptions, backOverheatCount: parseInt(e.target.value)})} style={{padding: '4px 8px', borderRadius: '4px', border: '1px solid #ddd'}}>
+                <label style={{fontSize: '0.85em', color: '#333'}}>后区过热出现次数: </label>
+                <select value={eliminationOptions.backOverheatCount} onChange={(e) => setEliminationOptions({...eliminationOptions, backOverheatCount: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
                   <option value={2}>≥2次（短窗口用）</option>
                   <option value={3}>≥3次</option>
                   <option value={4}>≥4次</option>
@@ -2198,30 +2396,30 @@ function App() {
                 </select>
               </div>
               <div>
-                <label style={{fontSize: '0.85em', color: '#666'}}>Z-score阈值: </label>
-                <select value={eliminationOptions.zScoreThreshold} onChange={(e) => setEliminationOptions({...eliminationOptions, zScoreThreshold: parseFloat(e.target.value)})} style={{padding: '4px 8px', borderRadius: '4px', border: '1px solid #ddd'}}>
+                <label style={{fontSize: '0.85em', color: '#333'}}>Z-score阈值: </label>
+                <select value={eliminationOptions.zScoreThreshold} onChange={(e) => setEliminationOptions({...eliminationOptions, zScoreThreshold: parseFloat(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
                   <option value={1.0}>1.0（宽松）</option>
                   <option value={1.5}>1.5（推荐）</option>
                   <option value={2.0}>2.0（严格）</option>
                 </select>
               </div>
               <div>
-                <label style={{fontSize: '0.85em', color: '#666'}}>前区连续出现期数: </label>
-                <select value={eliminationOptions.consecutiveThreshold} onChange={(e) => setEliminationOptions({...eliminationOptions, consecutiveThreshold: parseInt(e.target.value)})} style={{padding: '4px 8px', borderRadius: '4px', border: '1px solid #ddd'}}>
+                <label style={{fontSize: '0.85em', color: '#333'}}>前区连续出现期数: </label>
+                <select value={eliminationOptions.consecutiveThreshold} onChange={(e) => setEliminationOptions({...eliminationOptions, consecutiveThreshold: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
                   <option value={2}>≥2期</option>
                   <option value={3}>≥3期（推荐）</option>
                   <option value={4}>≥4期</option>
                 </select>
               </div>
               <div>
-                <label style={{fontSize: '0.85em', color: '#666'}}>后区连续出现期数: </label>
-                <select value={eliminationOptions.backConsecutiveThreshold} onChange={(e) => setEliminationOptions({...eliminationOptions, backConsecutiveThreshold: parseInt(e.target.value)})} style={{padding: '4px 8px', borderRadius: '4px', border: '1px solid #ddd'}}>
+                <label style={{fontSize: '0.85em', color: '#333'}}>后区连续出现期数: </label>
+                <select value={eliminationOptions.backConsecutiveThreshold} onChange={(e) => setEliminationOptions({...eliminationOptions, backConsecutiveThreshold: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
                   <option value={2}>≥2期（推荐，后区号码少）</option>
                   <option value={3}>≥3期</option>
                 </select>
               </div>
             </div>
-            <div style={{fontSize: '0.8em', color: '#999', marginTop: '8px'}}>
+            <div style={{fontSize: '0.8em', color: '#555', marginTop: '8px'}}>
               6种杀号算法：近30期过热(≥6次)、Z-score偏离、连续出现、二项分布检验、趋势动量、重号饱和。后区由于号码少(12个)，单号概率高(16.7%)，使用相同阈值(≥6次)保持保守策略。
             </div>
           </div>
@@ -2236,58 +2434,58 @@ function App() {
               border: '1px solid #c6f6d5'
             }}>
               <div style={{fontWeight: 'bold', color: '#2e7d32', marginBottom: '8px'}}>🔧 结构杀号参数配置</div>
-              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
+              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px'}}>
                 <div>
-                  <label style={{fontSize: '0.85em', color: '#666'}}>启用7区断区杀号: </label>
-                  <select value={structuralOptions.zoneBreakEnabled} onChange={(e) => setStructuralOptions({...structuralOptions, zoneBreakEnabled: e.target.value === 'true'})} style={{padding: '4px 8px', borderRadius: '4px', border: '1px solid #ddd'}}>
+                  <label style={{fontSize: '0.85em', color: '#333'}}>启用7区断区杀号: </label>
+                  <select value={structuralOptions.zoneBreakEnabled} onChange={(e) => setStructuralOptions({...structuralOptions, zoneBreakEnabled: e.target.value === 'true'})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
                     <option value="true">✅ 启用（推荐）</option>
                     <option value="false">❌ 禁用</option>
                   </select>
                 </div>
                 <div>
-                  <label style={{fontSize: '0.85em', color: '#666'}}>和值范围过滤: </label>
+                  <label style={{fontSize: '0.85em', color: '#333'}}>和值范围过滤: </label>
                   <select value={`${structuralOptions.sumMin}-${structuralOptions.sumMax}`} onChange={(e) => {
                     const [min, max] = e.target.value.split('-').map(Number);
                     setStructuralOptions({...structuralOptions, sumMin: min, sumMax: max});
-                  }} style={{padding: '4px 8px', borderRadius: '4px', border: '1px solid #ddd'}}>
+                  }} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
                     <option value="60-120">60-120（宽松）</option>
                     <option value="65-115">65-115（推荐）</option>
                     <option value="70-110">70-110（严格）</option>
                   </select>
                 </div>
                 <div>
-                  <label style={{fontSize: '0.85em', color: '#666'}}>重号杀号数量: </label>
-                  <select value={structuralOptions.repeatKillCount} onChange={(e) => setStructuralOptions({...structuralOptions, repeatKillCount: parseInt(e.target.value)})} style={{padding: '4px 8px', borderRadius: '4px', border: '1px solid #ddd'}}>
+                  <label style={{fontSize: '0.85em', color: '#444'}}>重号杀号数量: </label>
+                  <select value={structuralOptions.repeatKillCount} onChange={(e) => setStructuralOptions({...structuralOptions, repeatKillCount: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
                     <option value={2}>杀2个（保守）</option>
                     <option value={3}>杀3个（推荐）</option>
                     <option value={4}>杀4个（激进）</option>
                   </select>
                 </div>
                 <div>
-                  <label style={{fontSize: '0.85em', color: '#666'}}>启用尾数杀号: </label>
-                  <select value={structuralOptions.tailKillEnabled} onChange={(e) => setStructuralOptions({...structuralOptions, tailKillEnabled: e.target.value === 'true'})} style={{padding: '4px 8px', borderRadius: '4px', border: '1px solid #ddd'}}>
+                  <label style={{fontSize: '0.85em', color: '#444'}}>启用尾数杀号: </label>
+                  <select value={structuralOptions.tailKillEnabled} onChange={(e) => setStructuralOptions({...structuralOptions, tailKillEnabled: e.target.value === 'true'})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
                     <option value="true">✅ 启用（推荐）</option>
                     <option value="false">❌ 禁用</option>
                   </select>
                 </div>
                 <div>
-                  <label style={{fontSize: '0.85em', color: '#666'}}>热号检测期数: </label>
-                  <select value={structuralOptions.hotPeriods} onChange={(e) => setStructuralOptions({...structuralOptions, hotPeriods: parseInt(e.target.value)})} style={{padding: '4px 8px', borderRadius: '4px', border: '1px solid #ddd'}}>
+                  <label style={{fontSize: '0.85em', color: '#333'}}>热号检测期数: </label>
+                  <select value={structuralOptions.hotPeriods} onChange={(e) => setStructuralOptions({...structuralOptions, hotPeriods: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
                     <option value={10}>10期（推荐）</option>
                     <option value={15}>15期</option>
                     <option value={20}>20期</option>
                   </select>
                 </div>
                 <div>
-                  <label style={{fontSize: '0.85em', color: '#666'}}>冷号检测期数: </label>
-                  <select value={structuralOptions.coldPeriods} onChange={(e) => setStructuralOptions({...structuralOptions, coldPeriods: parseInt(e.target.value)})} style={{padding: '4px 8px', borderRadius: '4px', border: '1px solid #ddd'}}>
+                  <label style={{fontSize: '0.85em', color: '#333'}}>冷号检测期数: </label>
+                  <select value={structuralOptions.coldPeriods} onChange={(e) => setStructuralOptions({...structuralOptions, coldPeriods: parseInt(e.target.value)})} style={{padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333'}}>
                     <option value={20}>20期（推荐）</option>
                     <option value={30}>30期</option>
                     <option value={40}>40期</option>
                   </select>
                 </div>
               </div>
-              <div style={{fontSize: '0.8em', color: '#999', marginTop: '8px'}}>
+              <div style={{fontSize: '0.8em', color: '#555', marginTop: '8px'}}>
                 5种结构杀号算法：7区断区预测、和值范围过滤、重号杀号增强、尾数频率杀号、冷热号综合过滤。基于彩票开奖规律的结构化分析。
               </div>
             </div>
@@ -2349,28 +2547,28 @@ function App() {
               <div style={{fontSize: '0.85em', color: '#333', marginBottom: '8px'}}>
                 {backtestResult.summary}
               </div>
-              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '10px', marginBottom: '10px'}}>
-                <div style={{textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ddd'}}>
-                  <div style={{fontSize: '0.8em', color: '#666'}}>前区命中率</div>
+              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px', marginBottom: '10px'}}>
+                <div style={{textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ccc'}}>
+                  <div style={{fontSize: '0.8em', color: '#333'}}>前区命中率</div>
                   <div style={{fontWeight: 'bold', color: '#27ae60', fontSize: '1.3em'}}>{(backtestResult.frontAccuracy * 100).toFixed(1)}%</div>
                 </div>
-                <div style={{textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ddd'}}>
-                  <div style={{fontSize: '0.8em', color: '#666'}}>后区命中率</div>
+                <div style={{textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ccc'}}>
+                  <div style={{fontSize: '0.8em', color: '#333'}}>后区命中率</div>
                   <div style={{fontWeight: 'bold', color: '#27ae60', fontSize: '1.3em'}}>{(backtestResult.backAccuracy * 100).toFixed(1)}%</div>
                 </div>
-                <div style={{textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ddd'}}>
-                  <div style={{fontSize: '0.8em', color: '#666'}}>前区误杀</div>
+                <div style={{textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ccc'}}>
+                  <div style={{fontSize: '0.8em', color: '#333'}}>前区误杀</div>
                   <div style={{fontWeight: 'bold', color: '#e74c3c', fontSize: '1.1em'}}>{backtestResult.avgFrontWrongKill.toFixed(1)}个/期</div>
                 </div>
-                <div style={{textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ddd'}}>
-                  <div style={{fontSize: '0.8em', color: '#666'}}>回测期数</div>
+                <div style={{textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ccc'}}>
+                  <div style={{fontSize: '0.8em', color: '#333'}}>回测期数</div>
                   <div style={{fontWeight: 'bold', color: '#17a2b8', fontSize: '1.1em'}}>{backtestResult.totalPeriods}期</div>
                 </div>
               </div>
               {/* 最近5期回测明细 */}
-              <div style={{fontSize: '0.8em', color: '#666', marginBottom: '4px'}}>最近5期回测明细:</div>
+              <div style={{fontSize: '0.8em', color: '#333', marginBottom: '4px'}}>最近5期回测明细:</div>
               {backtestResult.details.slice(-5).reverse().map((detail, idx) => (
-                <div key={idx} style={{padding: '6px 8px', borderBottom: '1px solid #ddd', fontSize: '0.75em', display: 'flex', justifyContent: 'space-between'}}>
+                <div key={idx} style={{padding: '6px 8px', borderBottom: '1px solid #ccc', fontSize: '0.75em', display: 'flex', justifyContent: 'space-between'}}>
                   <div>第{detail.periodIndex}期: 开奖 [{detail.nextDraw.front.join(' ')} + {detail.nextDraw.back.join(' ')}]</div>
                   <div style={{color: detail.frontWrongKill > 0 ? '#e74c3c' : '#27ae60'}}>
                     保留命中{detail.frontCorrectKeep}/5 + 误杀{detail.frontWrongKill}个 | 前区命中{(detail.frontAccuracy * 100).toFixed(0)}%
@@ -2405,7 +2603,7 @@ function App() {
                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                       <div>
                         <strong>{algo.source ? `[${algo.source}] ` : ''}{algo.name}</strong>
-                        <span style={{color: '#999', marginLeft: '6px', fontSize: '0.8em'}}>{algo.description}</span>
+                        <span style={{color: '#555', marginLeft: '6px', fontSize: '0.8em'}}>{algo.description}</span>
                       </div>
                       <div style={{color: '#e74c3c', whiteSpace: 'nowrap'}}>
                         前区{algo.frontCount}个 / 后区{algo.backCount}个
@@ -2498,7 +2696,7 @@ function App() {
               {/* 套餐选择 */}
               <div className="fushi-plan-selector" style={{marginTop: '12px'}}>
                 <div style={{fontWeight: 'bold', marginBottom: '8px', color: '#2e7d32'}}>📋 选择复式套餐</div>
-                <p style={{fontSize: '0.8em', color: '#999', marginBottom: '8px'}}>杀号后从剩余号码池自动选取最优号码填充套餐，X+Y表示前区X个号码选5+后区Y个号码选2</p>
+                <p style={{fontSize: '0.8em', color: '#555', marginBottom: '8px'}}>杀号后从剩余号码池自动选取最优号码填充套餐，X+Y表示前区X个号码选5+后区Y个号码选2</p>
                 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px', marginBottom: '12px'}}>
                   {NumberEliminator.FUSHI_PLANS.map(plan => {
                     const bets = NumberEliminator.calcPlanBets(plan);
@@ -2587,7 +2785,7 @@ function App() {
                             left: '50%',
                             transform: 'translate(-50%, -50%) rotate(-45deg)',
                             fontSize: '0.8em',
-                            color: '#999',
+                            color: '#555',
                             fontWeight: 'bold',
                             whiteSpace: 'nowrap'
                           }}>号码不足</div>
@@ -2596,7 +2794,7 @@ function App() {
                     );
                   })}
                 </div>
-                {!eliminationResult && <div style={{fontSize: '0.8em', color: '#999'}}>请先执行杀号分析</div>}
+                {!eliminationResult && <div style={{fontSize: '0.8em', color: '#555'}}>请先执行杀号分析</div>}
               </div>
 
               {/* 自动选号结果展示 */}
@@ -2620,7 +2818,10 @@ function App() {
                           border: '1px solid #67c23a',
                           color: '#2e7d32',
                           fontWeight: 'bold',
-                          fontSize: '0.9em'
+                          fontSize: '0.9em',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}>
                           {num.toString().padStart(2, '0')}
                         </span>
@@ -2638,14 +2839,17 @@ function App() {
                           border: '1px solid #3498db',
                           color: '#2980b9',
                           fontWeight: 'bold',
-                          fontSize: '0.9em'
+                          fontSize: '0.9em',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}>
                           {num.toString().padStart(2, '0')}
                         </span>
                       ))}
                     </div>
                   </div>
-                  <div style={{fontSize: '0.8em', color: '#666', marginTop: '6px'}}>注：选号基于综合评分（频率+遗漏+趋势动量+时间衰减）自动选取最优号码</div>
+                  <div style={{fontSize: '0.8em', color: '#444', marginTop: '6px'}}>注：选号基于综合评分（频率+遗漏+趋势动量+时间衰减）自动选取最优号码</div>
                 </div>
               )}
 
@@ -2674,7 +2878,10 @@ function App() {
                               fontWeight: isEliminated ? 'bold' : 'normal',
                               textDecoration: isEliminated ? 'line-through' : 'none',
                               position: 'relative',
-                              cursor: 'default'
+                              cursor: 'default',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
                             }}
                             title={isEliminated ? `杀号原因: ${reasons.join('、')}` : '保留号码'}
                           >
@@ -2707,7 +2914,10 @@ function App() {
                               fontWeight: isEliminated ? 'bold' : 'normal',
                               textDecoration: isEliminated ? 'line-through' : 'none',
                               position: 'relative',
-                              cursor: 'default'
+                              cursor: 'default',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
                             }}
                             title={isEliminated ? `杀号原因: ${reasons.join('、')}` : '保留号码'}
                           >
@@ -2718,7 +2928,7 @@ function App() {
                       })}
                     </div>
                   </div>
-                  <div style={{fontSize: '0.8em', color: '#999', marginTop: '6px'}}>选择套餐后系统自动从保留号码中选最优号码</div>
+                  <div style={{fontSize: '0.8em', color: '#555', marginTop: '6px'}}>选择套餐后系统自动从保留号码中选最优号码</div>
                 </div>
               )}
 
@@ -2762,14 +2972,14 @@ function App() {
                       <span style={{fontSize: '1.1em', fontFamily: 'monospace'}}>
                         {fushiResult.frontPool.map(n => n.toString().padStart(2, '0')).join(' ')}
                       </span>
-                      <span style={{color: '#999', marginLeft: '6px', fontSize: '0.85em'}}>({fushiResult.frontPool.length}个选{fushiResult.frontCount})</span>
+                      <span style={{color: '#555', marginLeft: '6px', fontSize: '0.85em'}}>({fushiResult.frontPool.length}个选{fushiResult.frontCount})</span>
                     </div>
                     <div>
                       <span style={{color: '#3498db', fontWeight: 'bold', marginRight: '8px'}}>后区:</span>
                       <span style={{fontSize: '1.1em', fontFamily: 'monospace'}}>
                         {fushiResult.backPool.map(n => n.toString().padStart(2, '0')).join(' ')}
                       </span>
-                      <span style={{color: '#999', marginLeft: '6px', fontSize: '0.85em'}}>({fushiResult.backPool.length}个选{fushiResult.backCount})</span>
+                      <span style={{color: '#555', marginLeft: '6px', fontSize: '0.85em'}}>({fushiResult.backPool.length}个选{fushiResult.backCount})</span>
                     </div>
                   </div>
 

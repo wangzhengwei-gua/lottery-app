@@ -16,6 +16,7 @@ import { ConditionalProbability } from './analysis/ConditionalProbability.js';
 import { DanTuoOptimizer } from './optimization/DanTuoOptimizer.js';
 import { BackDanOptimizer } from './optimization/BackDanOptimizer.js';
 import { FrontDanOptimizer } from './optimization/FrontDanOptimizer.js';
+import { BackTuoOptimizer } from './optimization/BackTuoOptimizer.js';
 import { BayesianDanTuoModel } from './optimization/BayesianDanTuoModel.js';
 import { NormalDanTuoModel } from './optimization/NormalDanTuoModel.js';
 import { ZhouyiDanTuoModel } from './optimization/ZhouyiDanTuoModel.js';
@@ -754,7 +755,7 @@ class LotteryAnalyzer {
     // 处理后区
     let backCombinations = [];
     if (backDan && backDan.length > 0 && backTuo && backTuo.length > 0) {
-      // 后区也使用胆拖
+      // 后区有胆码的常规胆拖模式
       const backNeed = CONFIG.BACK_COUNT - backDan.length;
       if (backNeed > 0) {
         const backTuoCombs = this.combinations(backTuo, backNeed);
@@ -762,6 +763,10 @@ class LotteryAnalyzer {
       } else {
         backCombinations = [backDan.sort((a, b) => a - b)];
       }
+    } else if (backTuo && backTuo.length >= 2 && (!backDan || backDan.length === 0)) {
+      // 后区0胆纯拖模式：从拖码中选2个组合
+      const backTuoCombs = this.combinations(backTuo, CONFIG.BACK_COUNT);
+      backCombinations = backTuoCombs.map(backSel => backSel.sort((a, b) => a - b));
     } else {
       // 后区不使用胆拖，使用默认值
       backCombinations = [[1, 2]];
@@ -769,6 +774,7 @@ class LotteryAnalyzer {
 
     // 组合前后区
     const fullCombinations = [];
+    const isPureTuo = !backDan || backDan.length === 0;
     frontResult.combinations.forEach(frontComb => {
       backCombinations.forEach(back => {
         fullCombinations.push({
@@ -778,7 +784,7 @@ class LotteryAnalyzer {
           tuoNumbers: frontComb.tuoNumbers,
           backDan: backDan || [],
           backTuo: backTuo || [],
-          combinationType: '双区胆拖'
+          combinationType: isPureTuo ? '前区胆拖+后区纯拖' : '双区胆拖'
         });
       });
     });
@@ -1920,6 +1926,187 @@ class LotteryAnalyzer {
   /** 回测验证 */
   backtestEliminate(options = {}) {
     return StructuralEliminator.backtest(this, options);
+  }
+
+  /**
+   * 胆拖玩法回测验证 - 用历史数据测试胆拖推荐命中率
+   * @param {Object} options - 回测参数
+   * @param {string} options.strategy - 推荐策略: hot/balanced/conservative
+   * @param {number} options.danCount - 前区胆码数量（默认4）
+   * @param {number} options.tuoCount - 前区拖码数量
+   * @param {boolean} options.backDanEnabled - 是否启用后区胆码
+   * @param {number} options.backTuoCount - 后区拖码数量
+   * @param {boolean} options.backFullDrag - 是否一胆全拖
+   * @param {number} options.backtestPeriods - 回测期数（默认20）
+   * @returns {Object} 回测结果
+   */
+  backtestDanTuo(options = {}) {
+    const strategy = options.strategy || 'hot';
+    const danCount = options.danCount || 4;
+    const tuoCount = options.tuoCount || 10;
+    const backDanEnabled = options.backDanEnabled !== false;
+    const backTuoCount = options.backTuoCount || 4;
+    const backFullDrag = options.backFullDrag || false;
+    const periods = options.backtestPeriods || 20;
+
+    const activeData = this.getActiveData();
+    if (activeData.length < periods + 30) {
+      return {
+        success: false,
+        summary: `历史数据不足（需要${periods + 30}期，当前${activeData.length}期）`,
+        details: [],
+        frontDanHitRate: 0,
+        frontTuoHitRate: 0,
+        backHitRate: 0
+      };
+    }
+
+    const results = [];
+    const testStart = activeData.length - periods;
+
+    for (let i = testStart; i < activeData.length; i++) {
+      const actualDraw = activeData[i];
+      const trainData = activeData.slice(0, i);
+      if (trainData.length < 30) continue;
+
+      // 创建临时 analyzer 使用训练数据
+      // 需要通过 loadHistoryData 正确初始化所有分析器
+      const trainDataStr = trainData.map(d => d.full.join(' ')).join('\n');
+      const tempAnalyzer = new LotteryAnalyzer();
+      tempAnalyzer.loadHistoryData(trainDataStr, '回测训练数据');
+
+      // 前区胆码推荐
+      let frontDan = [];
+      let frontTuo = [];
+      let backDan = [];
+      let backTuo = [];
+
+      try {
+        const frontDanResult = FrontDanOptimizer.optimize(tempAnalyzer, danCount, strategy);
+        frontDan = frontDanResult.selected;
+
+        // 前区拖码推荐
+        const allFront = Array.from({length: 35}, (_, k) => k + 1);
+        const tuoCandidates = allFront.filter(n => !frontDan.includes(n));
+        frontTuo = tempAnalyzer.optimizeTuoSelectionWithZoneFrequency(frontDan, tuoCandidates, tuoCount, strategy);
+      } catch (e) {
+        console.warn('胆拖回测-前区推荐失败:', e);
+        continue;
+      }
+
+      // 后区推荐
+      try {
+        if (backDanEnabled) {
+          const backDanResult = BackDanOptimizer.optimize(tempAnalyzer, 1, strategy);
+          backDan = backDanResult.selected;
+
+          if (backFullDrag) {
+            backTuo = Array.from({length: 12}, (_, k) => k + 1).filter(n => !backDan.includes(n));
+          } else {
+            const backTuoResult = BackTuoOptimizer.optimize(tempAnalyzer, backDan, backTuoCount, strategy);
+            backTuo = backTuoResult.selected;
+          }
+        } else {
+          const backTuoResult = BackTuoOptimizer.optimize(tempAnalyzer, [], backTuoCount, strategy);
+          backTuo = backTuoResult.selected;
+        }
+      } catch (e) {
+        console.warn('胆拖回测-后区推荐失败:', e);
+      }
+
+      // 计算命中情况
+      const frontDanHits = frontDan.filter(n => actualDraw.front.includes(n)).length;
+      const frontTuoHits = frontTuo.filter(n => actualDraw.front.includes(n)).length;
+      const frontAllHits = [...frontDan, ...frontTuo].filter(n => actualDraw.front.includes(n)).length;
+      const backDanHits = backDan.filter(n => actualDraw.back.includes(n)).length;
+      const backTuoHits = backTuo.filter(n => actualDraw.back.includes(n)).length;
+      const backAllHits = [...backDan, ...backTuo].filter(n => actualDraw.back.includes(n)).length;
+
+      // 前区胆码是否至少命中1个
+      const frontDanAtLeast1 = frontDanHits >= 1;
+      // 前区总号码池（胆+拖）命中数
+      const frontPoolCoverage = frontAllHits;
+      // 后区号码池命中率
+      const backCoverage = backAllHits;
+
+      results.push({
+        periodIndex: i + 1,
+        actualDraw: { front: actualDraw.front, back: actualDraw.back },
+        frontDan,
+        frontTuo,
+        backDan,
+        backTuo,
+        frontDanHits,
+        frontTuoHits,
+        frontAllHits,
+        backDanHits,
+        backTuoHits,
+        backAllHits,
+        frontDanAtLeast1,
+        frontPoolCoverage,
+        backCoverage
+      });
+    }
+    
+    if (results.length === 0) {
+      return {
+        success: false,
+        summary: '回测无有效结果',
+        details: [],
+        frontDanHitRate: 0,
+        frontTuoHitRate: 0,
+        backHitRate: 0
+      };
+    }
+
+    // 统计汇总
+    const avgDanHits = results.reduce((a, r) => a + r.frontDanHits, 0) / results.length;
+    const danAtLeast1Rate = results.filter(r => r.frontDanAtLeast1).length / results.length;
+    const avgFrontPoolHits = results.reduce((a, r) => a + r.frontAllHits, 0) / results.length;
+    const avgFrontTuoHits = results.reduce((a, r) => a + r.frontTuoHits, 0) / results.length;
+    const avgBackHits = results.reduce((a, r) => a + r.backAllHits, 0) / results.length;
+    const avgBackDanHits = results.reduce((a, r) => a + r.backDanHits, 0) / results.length;
+    const avgBackTuoHits = results.reduce((a, r) => a + r.backTuoHits, 0) / results.length;
+
+    // 随机基线：从35个号码中选danCount个胆码，期望命中5*danCount/35
+    const randomDanExpect = 5 * danCount / 35;
+    // 从tuoCount个拖码中选(5-danCount)个，期望命中(5-danCount)*tuoCount/35
+    const frontNeedFromTuo = 5 - danCount;
+    const randomTuoExpect = frontNeedFromTuo * tuoCount / 35;
+    // 随机基线后区
+    const randomBackExpect = backDanEnabled ? (2 * (backDan.length || 1) / 12 + 2 * backTuoCount / 12) : (2 * backTuoCount / 12);
+
+    const strategyName = strategy === 'hot' ? '热号策略' : strategy === 'balanced' ? '均衡策略' : '保守策略';
+    const backModeName = backDanEnabled ? (backFullDrag ? '一胆全拖' : '胆拖模式') : '纯拖模式';
+
+    const summary = `${strategyName}回测${results.length}期（${backModeName}）：` +
+      `前区胆码命中${avgDanHits.toFixed(2)}个/期（随机期望${randomDanExpect.toFixed(2)}个），` +
+      `胆码至少命中1个概率${(danAtLeast1Rate * 100).toFixed(1)}%，` +
+      `前区号码池（胆+拖）命中${avgFrontPoolHits.toFixed(2)}个/期，` +
+      `后区命中${avgBackHits.toFixed(2)}个/期（随机期望${randomBackExpect.toFixed(2)}个）`;
+
+    return {
+      success: true,
+      strategy: strategyName,
+      backMode: backModeName,
+      summary,
+      details: results,
+      danCount,
+      tuoCount,
+      backDanEnabled,
+      backTuoCount,
+      avgDanHits,
+      danAtLeast1Rate,
+      avgFrontPoolHits,
+      avgFrontTuoHits,
+      avgBackHits,
+      avgBackDanHits,
+      avgBackTuoHits,
+      randomDanExpect,
+      randomTuoExpect,
+      randomBackExpect,
+      totalPeriods: results.length
+    };
   }
 
   /** 混合模式杀号 */

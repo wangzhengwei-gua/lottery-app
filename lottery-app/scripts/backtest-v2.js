@@ -327,7 +327,8 @@ function runBacktest(totalPeriods = 200, strategies = ['hot', 'balanced', 'conse
     // 从第50期开始回测（确保有足够训练数据）
     const startIdx = 50;
     
-    for (let i = startIdx; i < totalPeriods; i++) {
+    const endIdx = Math.min(startIdx + totalPeriods, historyData.length);
+    for (let i = startIdx; i < endIdx; i++) {
       const result = backtestSinglePeriod(historyData, i, strategy, repeatCount);
       if (result) {
         periodResults.push(result);

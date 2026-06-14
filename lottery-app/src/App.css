@@ -606,7 +606,7 @@ textarea:focus {
 
 .control-hint {
   font-size: 0.85em;
-  color: #fff3cd;
+  color: #856404;
   margin-left: 5px;
   font-weight: 500;
 }
@@ -2105,11 +2105,11 @@ button.success {
   
   .control-hint {
     font-size: 0.85em !important;
-    color: #fff3cd !important;
+    color: #856404 !important;
     margin-top: 5px !important;
     display: block !important;
     width: 100% !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
   }
 }
 
@@ -3046,7 +3046,7 @@ button.success {
 }
 
 .result-summary {
-  color: #666;
+  color: #444;
   font-size: 0.9em;
 }
 
@@ -3172,7 +3172,7 @@ button.success {
 
 .tip-description {
   margin: 8px 0;
-  color: #666;
+  color: #444;
   font-size: 0.95em;
   line-height: 1.5;
 }
@@ -3261,7 +3261,7 @@ button.success {
 
 .copy-hint {
   margin-top: 10px;
-  color: #999;
+  color: #555;
   font-size: 0.85em;
 }
 
@@ -4630,4 +4630,95 @@ button.success {
   font-size: 0.75em;
   white-space: nowrap;
   z-index: 10;
+}
+
+/* 复式玩法移动端适配 */
+@media (max-width: 768px) {
+  .fushi-section {
+    padding: 15px 10px !important;
+  }
+  
+  .fushi-section h2 {
+    font-size: 1.2em !important;
+  }
+  
+  .fushi-plan-btn {
+    padding: 10px 6px !important;
+    font-size: 0.9em !important;
+  }
+  
+  .fushi-number-btn {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 0.8em !important;
+  }
+  
+  .fushi-number-picker {
+    gap: 3px !important;
+  }
+  
+  .result-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+  }
+  
+  .fushi-result .result-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+  }
+  
+  .fushi-result .result-summary {
+    font-size: 0.8em !important;
+    color: #444 !important;
+  }
+  
+  .strategy-desc {
+    color: #444 !important;
+  }
+  
+  .tip-description {
+    color: #444 !important;
+  }
+  
+  .copy-hint {
+    color: #555 !important;
+  }
+  
+  /* 杀号参数区域 */
+  .elimination-options {
+    font-size: 0.9em !important;
+  }
+  
+  .elimination-options label {
+    color: #444 !important;
+  }
+  
+  .elimination-options select {
+    width: 100% !important;
+    font-size: 1em !important;
+    padding: 8px 6px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .fushi-section {
+    padding: 12px 8px !important;
+  }
+  
+  .fushi-plan-btn {
+    padding: 8px 4px !important;
+    font-size: 0.85em !important;
+  }
+  
+  .fushi-number-btn {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.75em !important;
+  }
+  
+  .fushi-number-picker {
+    gap: 2px !important;
+  }
 }
