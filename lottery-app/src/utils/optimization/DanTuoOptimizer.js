@@ -91,11 +91,17 @@ export class DanTuoOptimizer {
 
     console.log('  区间频率:', zoneFrequencies);
 
-    // 计算每个候选拖码的综合评分（15维度）
-    // 改进1~5：均衡/保守差异化+区间分布归一化+协同性归一化+共享趋势工具+自适应扰动
-    // 均衡策略15维度：频率+动量15 + 区间分布12(归一化) + 5小区趋势8 + 频率逆袭5 + 条件概率25 + 遗漏偏离度15 + 关联性8 + 协同性10(和值4+奇偶3+跨度3归一化) + 历史相似度5 + 间距模式5 + 跨区协同性3 + 跨期形态10 + 冷却惩罚-3 = 96~109
-    // 保守策略15维度：频率+动量8(降) + 区间分布8(降+归一化) + 5小区趋势5(降) + 频率逆袭3(降) + 条件概率20(降) + 遗漏偏离度20(升) + 关联性8 + 协同性8(和值3+奇偶2+跨度3归一化) + 历史相似度5 + 间距模式5 + 跨区协同性3 + 跨期形态10 + 冷却惩罚-2 = 80~97
-    // 热号策略17维度：热度信号17 + 频率逆袭8 + 条件概率20 + 重号因子8~15 + 5小区趋势12 + 动量加速8 + 关联性8 + 协同性6(奇偶-3~0归一化+和值4+跨度2) + 历史相似度5 + 间距模式5 + 跨区协同性3 + 跨期形态10 + 区间防极端-5 + 冷却惩罚-8 = 82~118
+    // 维度权重倍率（去重叠化配置，与FrontDanOptimizer对齐）
+    // 核心原则：拖码降重叠维度(条件概率/频率/遗漏)，升拖码专用维度(关联性/协同性/间距)
+    // 均衡依赖少数强维度(条件概率主导但降低重叠)，保守需多维确认回归
+    // 热号启用timeDecay+zoneAntiExtreme
+    // 同步FrontDanOptimizer：omissionDeviation 0.6(均衡)/1.0(保守), timeDecay 0.5(热)/0(均衡)/0.3(保守)
+    const defaultMultipliers = {
+      hot: { heatSignal: 1, freqRatio: 0.75, conditionalProb: 0.6, repeatFactor: 1, zone5Trend: 1, momentum: 0.6, correlation: 1.5, synergy: 1, historicalSimilarity: 1, gapScore: 1.2, crossZone: 1, crossPeriod: 1, coolingPenalty: 0.6, zoneSaturation: 1, zoneAntiExtreme: 0.5, timeDecay: 0.5 },
+      balanced: { freqMomentum: 0.6, conditionalProb: 0.5, omissionDeviation: 0.6, freqRatio: 0.6, zoneDistribution: 1, zone5Trend: 1, correlation: 1.5, synergy: 1, historicalSimilarity: 0.5, gapScore: 1.2, crossZone: 1, crossPeriod: 1, coolingPenalty: 0.5, zoneSaturation: 0, zoneAntiExtreme: 1, timeDecay: 0 },
+      conservative: { freqMomentum: 0.5, conditionalProb: 0.4, omissionDeviation: 0.8, freqRatio: 0.3, zoneDistribution: 1, zone5Trend: 1, correlation: 1.5, synergy: 1, historicalSimilarity: 0.5, gapScore: 1.2, crossZone: 1, crossPeriod: 1, coolingPenalty: 0.3, zoneSaturation: 0.3, zoneAntiExtreme: 1, timeDecay: 0.3 }
+    };
+    const dm = defaultMultipliers[strategy];
     // 获取条件概率和遗漏数据
     const conditionalProb = this.conditionalProbability.calculateConditionalProbability();
     const omission = this.omissionCalculator.calculateOmission();
@@ -110,13 +116,18 @@ export class DanTuoOptimizer {
     // 优化7：时间衰减权重（用于冷却惩罚优化）
     // 直接计算时间衰减：近10期线性衰减（第1期=1.0，第10期=0.1）
     const TIME_DECAY_WINDOW = 10;
-    const rawTimeWeights = {};
-    for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) rawTimeWeights[i] = 0;
+    const rawTimeWeights = { front: {}, back: {} };
+    for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) rawTimeWeights.front[i] = 0;
+    for (let i = 1; i <= CONFIG.BACK_RANGE; i++) rawTimeWeights.back[i] = 0;
     const recentData = activeData.slice(-TIME_DECAY_WINDOW);
     for (const draw of recentData) {
       for (const num of draw.front) {
         const idx = recentData.indexOf(draw);
-        rawTimeWeights[num] += 1 - idx / TIME_DECAY_WINDOW; // 近->远：1.0->0.1
+        rawTimeWeights.front[num] += 1 - idx / TIME_DECAY_WINDOW; // 近->远：1.0->0.1
+      }
+      for (const num of draw.back) {
+        const idx = recentData.indexOf(draw);
+        rawTimeWeights.back[num] += 1 - idx / TIME_DECAY_WINDOW;
       }
     }
     
@@ -252,13 +263,12 @@ export class DanTuoOptimizer {
     // 预计算：均衡/保守策略动量归一化常量
     const maxMomentum = Math.max(...Object.values(recentFreq.frontMomentum).map(m => Math.abs(m)));
     // 预计算：尾数分布周期动态数据（优化2：动态识别关键尾数+自适应阈值）
-    // 根据近30期各尾数出现频率动态选择top 4热尾数，而非硬编码[1,2,7,8]
+    // 根据近30期前区各尾数出现频率动态选择top 4热尾数，而非硬编码[1,2,7,8]
     const tailFreqRecent30 = {}; // 近30期各尾数出现次数
     for (let t = 0; t <= 9; t++) tailFreqRecent30[t] = 0;
     const recent30DataForTail = activeData.slice(-Math.min(30, activeData.length));
     for (const draw of recent30DataForTail) {
-      for (const num of draw.front) tailFreqRecent30[num % 10]++; // 大乐透前区尾数0-5
-      for (const num of draw.back) tailFreqRecent30[num % 10]++; // 后区尾数也计入
+      for (const num of draw.front) tailFreqRecent30[num % 10]++; // 仅使用前区号码的尾数
     }
     // 动态关键尾数：近30期频率最高的4个尾数（而非硬编码）
     const dynamicHotTails = Object.entries(tailFreqRecent30)
@@ -293,26 +303,26 @@ export class DanTuoOptimizer {
         const freqBoost = maxFreq > 0 ? (freq / maxFreq) * 5 : 0;
         score += omissionBaseScore + freqBoost;
       } else if (strategy === 'balanced') {
-        // 均衡策略：频率基础10分 + 动量5分
+        // 均衡策略：频率基础10分 + 动量5分（降重叠，dm=0.6）
         const freqBase = maxFreq > 0 ? (freq / maxFreq) * 10 : 0;
         const momentum = recentFreq.frontMomentum[tuoNum] || 0;
         const normalizedMomentum = maxMomentum > 0 ? momentum / maxMomentum : 0;
-        score += freqBase + Math.max(0, normalizedMomentum) * 5;
+        score += (freqBase + Math.max(0, normalizedMomentum) * 5) * dm.freqMomentum;
       } else {
-        // 保守策略（改进1：降低频率/动量，更注重遗漏回归而非热度）
-        const freqBase = maxFreq > 0 ? (freq / maxFreq) * 6 : 0; // 频率降至6分
+        // 保守策略：频率降至6分 + 动量降至2分（降重叠，dm=0.5）
+        const freqBase = maxFreq > 0 ? (freq / maxFreq) * 6 : 0;
         const momentum = recentFreq.frontMomentum[tuoNum] || 0;
         const normalizedMomentum = maxMomentum > 0 ? momentum / maxMomentum : 0;
-        score += freqBase + Math.max(0, normalizedMomentum) * 2; // 动量降至2分
+        score += (freqBase + Math.max(0, normalizedMomentum) * 2) * dm.freqMomentum;
       }
 
-      // 1b. 近期频率逆袭加成 - 归一化（改进1：保守策略降至3分，更少追逐热号逆袭）
-      // 近30期频率/全量频率 比值>1 → 近期升温比历史更热 → 加分
+      // 1b. 近期频率逆袭加成（降重叠，dm控制）
+      // 近30期频率/全量频率比值>1 → 冷→热逆袭信号 → 加分
       const freqRatio = frontFreqRatio[tuoNum] || 0;
       if (freqRatio > 1) {
         const normalizedRatio = maxFreqRatioValue > 1 ? (freqRatio - 1) / (maxFreqRatioValue - 1) : 0;
         const freqRatioMax = strategy === 'hot' ? 8 : strategy === 'balanced' ? 5 : 3;
-        score += normalizedRatio * freqRatioMax;
+        score += normalizedRatio * freqRatioMax * (dm.freqRatio || 1);
       }
 
       // 2. 区间/热区评分
@@ -327,30 +337,33 @@ export class DanTuoOptimizer {
           score += Math.min(repeatAnalysis.frontRepeatRate * 15 * repeatWeightFactor, repeatMaxScore);
         }
       } else if (strategy === 'balanced') {
-        // 均衡策略：区间分布得分（12分满分，改进2：归一化连续加分而非离散跳跃）
+        // 衡策略：区间分布得分（12分满分，dm控制）
         const danInThisZone = danZoneCount[zone] || 0;
         const zoneFreqRank = Object.entries(zoneFrequencies)
           .sort((a, b) => b[1] - a[1])
           .findIndex(([z]) => parseInt(z) === zone);
-        // 归一化：排名0→12分，排名6→3分，线性递减
         const maxZoneRank = 6;
+        let zoneScore = 0;
         if (danInThisZone === 0) {
-          score += Math.max(3, 12 - (zoneFreqRank / maxZoneRank) * 9);
+          zoneScore = Math.max(3, 12 - (zoneFreqRank / maxZoneRank) * 9);
         } else {
-          score += Math.max(1, 5 - danInThisZone * 2);
+          zoneScore = Math.max(1, 5 - danInThisZone * 2);
         }
+        score += zoneScore * (dm.zoneDistribution || 1);
       } else {
-        // 保守策略（改进1+2）：区间分布降至8分，归一化连续加分
+        // 保守策略：区间分布降至8分，dm控制
         const danInThisZone = danZoneCount[zone] || 0;
         const zoneFreqRank = Object.entries(zoneFrequencies)
           .sort((a, b) => b[1] - a[1])
           .findIndex(([z]) => parseInt(z) === zone);
         const maxZoneRank = 6;
+        let zoneScore = 0;
         if (danInThisZone === 0) {
-          score += Math.max(2, 8 - (zoneFreqRank / maxZoneRank) * 6);
+          zoneScore = Math.max(2, 8 - (zoneFreqRank / maxZoneRank) * 6);
         } else {
-          score += Math.max(1, 3 - danInThisZone * 1);
+          zoneScore = Math.max(1, 3 - danInThisZone * 1);
         }
+        score += zoneScore * (dm.zoneDistribution || 1);
       }
 
       // 2b. 5小区动态趋势加分（所有策略共用，唯一计算点）
@@ -378,46 +391,60 @@ export class DanTuoOptimizer {
         else if (prediction === 'unlikely_cool') score -= 1;
       }
 
-      // 3. 条件概率加成 - 归一化（改进1：保守策略降至20分，均衡25分，热号20分）
+      // 3. 条件概率加成（降重叠，dm控制）
       const condProb = conditionalProb.front[tuoNum] || 0;
       const normalizedCondProb = maxCondProb > 0 ? condProb / maxCondProb : 0;
-      score += normalizedCondProb * (strategy === 'hot' ? 20 : strategy === 'balanced' ? 25 : 20);
+      score += normalizedCondProb * (strategy === 'hot' ? 20 : strategy === 'balanced' ? 25 : 20) * dm.conditionalProb;
 
-      // 4. 遗漏偏离度评分 - 仅均衡/保守策略（改进1：保守策略升至20分，均衡15分）
+      // 3b. 时间衰减得分（dm控制，与FrontDanOptimizer同步）
+      // 近期数据权重更高，热号5分(dm=0.5→2.5), 保守4.5分(dm=0.3→1.35), 均衡禁用(dm=0)
+      const rawTimeWeight = rawTimeWeights.front[tuoNum] || 0;
+      const maxFrontTimeWeight = Math.max(...Object.values(rawTimeWeights.front));
+      const normalizedTimeWeight = maxFrontTimeWeight > 0 ? rawTimeWeight / maxFrontTimeWeight : 0;
+      score += normalizedTimeWeight * (strategy === 'hot' ? 5 : strategy === 'balanced' ? 0 : 4.5) * (dm.timeDecay || 0);
+
+      // 4. 遗漏偏离度评分（降重叠，σ分段归一化+dm倍率，与FrontDanOptimizer同步）
       // 热号策略已在热度信号维度中处理遗漏，此处仅均衡/保守策略使用
       if (strategy !== 'hot') {
         const omissionDeviation = currentOmission - avgFrontOmission;
         const absOmissionDeviation = Math.abs(omissionDeviation);
-        const maxAbsDeviation = Math.max(
-          ...Object.values(omission.front).map(o => Math.abs((o || 0) - avgFrontOmission))
-        );
-        const normalizedAbsDeviation = maxAbsDeviation > 0 ? absOmissionDeviation / maxAbsDeviation : 0;
-        const baseDevScore = strategy === 'balanced' ? 5 : 7; // 保守策略基础偏离分更高
-        score += normalizedAbsDeviation * baseDevScore;
-        // 均衡/保守偏向高遗漏号码
-        const highOmissionMax = strategy === 'balanced' ? 7 : 10; // 保守策略高遗漏加分更高
-        if (omissionDeviation > 0 && maxPositiveDeviation > 0) {
-          score += (omissionDeviation / maxPositiveDeviation) * highOmissionMax;
-          if (omissionDeviation > omissionStd * 2) score += 3;
+        const sigma2 = omissionStd * 2;
+        
+        const baseDevScore = strategy === 'balanced' ? 5 : 7;
+        let baseScore = 0;
+        if (absOmissionDeviation >= sigma2 && sigma2 > 0) {
+          baseScore = baseDevScore;
+        } else if (sigma2 > 0) {
+          baseScore = (absOmissionDeviation / sigma2) * baseDevScore;
         }
+        
+        const highOmissionMax = strategy === 'balanced' ? 7 : 10;
+        let strategyBonus = 0;
+        if (omissionDeviation > 0) {
+          if (omissionDeviation >= sigma2 && sigma2 > 0) {
+            strategyBonus = highOmissionMax;
+          } else if (sigma2 > 0) {
+            strategyBonus = (omissionDeviation / sigma2) * highOmissionMax;
+          }
+          if (omissionDeviation > sigma2) strategyBonus += 3;
+        }
+        score += (baseScore + strategyBonus) * dm.omissionDeviation;
       }
 
-      // 5. 关联性加成（优化1+2：降低至8分，避免与条件概率重复；归一化使用全局最大值）
-      // 优化1：关联性与条件概率都基于共现，降低权重避免双重计算
-      // 关联性专注近40%窗口的时间衰减共现，条件概率专注全局条件依赖
+      // 5. 关联性加成（升拖码专用，dm控制）
       const rawCorr = rawCorrelationScores.find(s => s.number === tuoNum)?.corr || 0;
       const normalizedCorr = maxCorr > 0 ? rawCorr / maxCorr : 0;
-      score += normalizedCorr * (strategy === 'hot' ? 8 : 8);
+      score += normalizedCorr * 10 * dm.correlation;
 
-      // 6. 协同评分加成（改进3：归一化连续加分而非离散跳跃）
-      // 和值协调：拖码加入后使总和接近历史均值（使用预计算的sumTrend/currentDanSum）
+      // 6. 协同评分加成（拖码专用，dm控制）
+      // 和值协调：拖码加入后使总和接近历史均值
       const targetTotalSum = sumTrend.avgFrontSum;
       const sumWithTuo = currentDanSum + tuoNum;
       const sumDiff = Math.abs(sumWithTuo - targetTotalSum / 5 * (danNumbers.length + 1));
       const maxSumDiff = targetTotalSum * 0.5;
       const sumScoreMax = strategy === 'hot' ? 4 : strategy === 'balanced' ? 4 : 3;
       const sumScore = maxSumDiff > 0 ? Math.max(0, 1 - sumDiff / maxSumDiff) * sumScoreMax : 2;
-      score += sumScore;
+      score += sumScore * dm.synergy;
 
       // 奇偶协调（改进3：归一化连续加分，理想比40%-60%得满分，偏离越多扣分越多）
       const danOddCount = danNumbers.filter(n => n % 2 !== 0).length;
@@ -429,17 +456,16 @@ export class DanTuoOptimizer {
       const oddDeviation = Math.abs(actualOddRatio - idealOddRatio);
       const maxOddDeviation = 0.5; // 最大偏离(全奇0:5或全偶5:0)
       if (strategy === 'hot') {
-        // 热号：归一化惩罚（改进3），偏离越大扣分越多，最多扣3分
-        // 不再离散跳扣2分，而是连续递减，避免0.39→0分0.41→-2分的突变
+        // 热号：归一化惩罚（dm控制）
         if (oddDeviation > 0.2) {
-          score -= Math.min((oddDeviation - 0.2) / 0.3, 1) * 3;
+          score -= Math.min((oddDeviation - 0.2) / 0.3, 1) * 3 * dm.synergy;
         }
       } else if (strategy === 'balanced') {
-        // 均衡：归一化加分3分，偏离越小加分越多
-        score += Math.max(0, 1 - oddDeviation / maxOddDeviation) * 3;
+        // 均衡：归一化加分3分
+        score += Math.max(0, 1 - oddDeviation / maxOddDeviation) * 3 * dm.synergy;
       } else {
         // 保守：归一化加分2分
-        score += Math.max(0, 1 - oddDeviation / maxOddDeviation) * 2;
+        score += Math.max(0, 1 - oddDeviation / maxOddDeviation) * 2 * dm.synergy;
       }
 
       // 跨度协调：拖码加入后使号码跨度合理（使用预计算的spanAnalysis）
@@ -449,91 +475,74 @@ export class DanTuoOptimizer {
       const maxSpanDiff = spanAnalysis.avgFrontSpan * 0.3;
       const spanScoreMax = strategy === 'hot' ? 2 : 3;
       const spanBonus = maxSpanDiff > 0 ? Math.max(0, 1 - spanDiff / maxSpanDiff) * spanScoreMax : 1;
-      score += spanBonus;
+      score += spanBonus * dm.synergy;
       
-      // 热号策略：动量加速度加分（优化3：提升至8分满分）
-      // 近10期动量 > 近30期动量 → 正在加速升温 → 加分（与FrontDanOptimizer同步）
+      // 热号策略：动量加速度加分（dm控制）
       if (strategy === 'hot') {
         const veryRecentRate = (veryRecentFrontFreq[tuoNum] || 0) / veryRecentCount;
         const mediumRecentRate = (recentFreq.front[tuoNum] || 0) / (recentFreq.recentCount || 15);
         const acceleration = veryRecentRate - mediumRecentRate;
         if (acceleration > 0 && maxAcceleration > 0) {
-          score += (acceleration / maxAcceleration) * 8;
+          score += (acceleration / maxAcceleration) * 5 * dm.momentum;
         }
       }
       
-      // 所有策略：冷却惩罚（优化3+7：热号最多-8分，均衡-3分，保守-2分；增加高频号容忍度）
-      // 高频号（历史频率 > 平均）且当前遗漏 > 平均遗漏 → 正在冷却 → 扣分
-      // 优化7：长期高频号(历史频率>1.5倍平均)冷却容忍度提升，结合时间衰减判断
+      // 所有策略：冷却惩罚（dm控制）
       const numFreq = frontCounter[String(tuoNum)] || frontCounter[tuoNum] || 0;
       const timeWeight = rawTimeWeights ? (rawTimeWeights.front[tuoNum] || 0) / (Math.max(...Object.values(rawTimeWeights.front)) || 1) : 0;
       if (numFreq > avgFreqPerNum && currentOmission > avgFrontOmission) {
         const coolingDegree = (currentOmission - avgFrontOmission) / avgFrontOmission;
         const freqHeat = numFreq / avgFreqPerNum;
-        // 优化7：高频号(>1.5倍平均)冷却容忍度+50%，时间衰减高(>0.7)时额外容忍
         const toleranceFactor = freqHeat > 1.5 ? 1.5 : (timeWeight > 0.7 ? 1.3 : 1.0);
         const maxPenalty = strategy === 'hot' ? 8 : strategy === 'balanced' ? 3 : 2;
         const penalty = Math.min(coolingDegree * freqHeat * 2 / toleranceFactor, maxPenalty);
-        score -= penalty;
+        score -= penalty * (dm.coolingPenalty || 1);
       }
 
-      // 热号策略：区间饱和度调节（恢复加分最多5分，过热扣分最多3分）
-      // 捕捉均值回归：212期区7近5期出6次(远超理论3.57次)，但212区7完全没号
-      if (strategy === 'hot') {
-        const expectedZoneFreqPerPeriod = 5 / 7; // 理论≈0.71个/区/期
+      // 所有策略：区间饱和度调节（dm控制，均值回归信号）
+      {
+        const expectedZoneFreqPerPeriod = 5 / 7;
         const expectedZoneFreq = expectedZoneFreqPerPeriod * veryRecentCount;
-        const zoneRecentFreqNum = zoneRecentFreq10[zone] || 0; // 用近10期短窗口捕捉短期过热
+        const zoneRecentFreqNum = zoneRecentFreq10[zone] || 0;
+        const zoneSatMax = strategy === 'hot' ? 5 : strategy === 'balanced' ? 3 : 2;
         if (zoneRecentFreqNum < expectedZoneFreq * 0.7) {
-          // 冷区恢复加分
-          const recoveryBonus = Math.min((expectedZoneFreq - zoneRecentFreqNum) / expectedZoneFreq * 5, 5);
-          score += recoveryBonus;
+          const recoveryBonus = Math.min((expectedZoneFreq - zoneRecentFreqNum) / expectedZoneFreq * zoneSatMax, zoneSatMax);
+          score += recoveryBonus * (dm.zoneSaturation || 0);
         } else if (zoneRecentFreqNum > expectedZoneFreq * 1.5) {
-          // 过热区冷却扣分
-          const overheatPenalty = Math.min((zoneRecentFreqNum - expectedZoneFreq) / expectedZoneFreq * 3, 3);
-          score -= overheatPenalty;
+          const overheatPenalty = Math.min((zoneRecentFreqNum - expectedZoneFreq) / expectedZoneFreq * (zoneSatMax * 0.6), zoneSatMax * 0.6);
+          score -= overheatPenalty * (dm.zoneSaturation || 0);
         }
       }
 
 
-      // 7. 历史形态相似度加成（优化3：热号提升至5分，与均衡/保守对齐）- 归一化
-      // 使用外层已获取的activeData，避免重复调用getActiveData
+      // 7. 历史形态相似度加成（dm控制）
       const similarityBonus = HistoricalSimilarity.computeNumberSimilarityBonus(
         tuoNum, true, danNumbers, [], activeData
       );
-      score += similarityBonus * (strategy === 'hot' ? 5 : 5);
+      score += similarityBonus * (strategy === 'hot' ? 5 : strategy === 'balanced' ? 5 : 5) * (dm.historicalSimilarity || 1);
 
-      // 8. 号码间距模式加成（5分满分）- 独立性维度
-      // 基于拖码与胆码之间差值的分布模式，与频率/遗漏/关联性低相关
-      // 计算拖码与每个胆码的间距，检查是否符合历史常见的间距分布
+      // 8. 号码间距模式加成（拖码专用，dm控制）
       const gapsWithDan = danNumbers.map(dan => Math.abs(tuoNum - dan));
-      // 历史前区5个号码的间距分布：约50%期有连号(gap=1)，约30%有跳号(gap=2)
-      // 合理间距范围[1, 12]，覆盖连号(gap=1)、跳号(gap=2)和中等间距(gap=3-12)
-      // 温和权重：gap=1权重1.3，gap=2权重1.1，其余1.0（不过度偏向连号）
       let gapScore = 0;
       if (danNumbers.length > 0) {
-        const weightedGapCount = gapsWithDan.reduce((sum, g) => {
+        const bestGapWeight = Math.max(...gapsWithDan.map(g => {
           if (g >= 1 && g <= 12) {
-            // 温和权重：连号1.3，跳号1.1，其余1.0
-            const weight = g === 1 ? 1.3 : g === 2 ? 1.1 : 1.0;
-            return sum + weight;
+            return g === 1 ? 1.3 : g === 2 ? 1.1 : 1.0;
           }
-          return sum;
-        }, 0);
-        const maxWeightedGap = danNumbers.length * 1.3; // 满分基准
-        gapScore = (weightedGapCount / maxWeightedGap) * 5;
+          return 0;
+        }));
+        gapScore = (bestGapWeight / 1.3) * 5;
       } else {
         gapScore = 2.5;
       }
-      score += gapScore;
+      score += gapScore * dm.gapScore;
 
-      // 8b. 跨区协同性维度（3分满分，优化3：防止胆码拖码过度集中）
-      // 拖码与胆码同区过多→扣分；拖码在胆码未覆盖区→加分
-      // 独立性：基于区间分布而非频率/遗漏，与区间分布维度互补（区间分布看频率排名，协同性看胆码覆盖）
+      // 8b. 跨区协同性维度（拖码专用，dm控制）
       const danInTuoZone = danZoneCount[zone] || 0;
       if (danInTuoZone >= 2) {
-        score -= 3; // 同区已有2+胆码→拖码避开该区（防过度集中）
+        score -= 3 * (dm.crossZone || 1);
       } else if (danInTuoZone === 0) {
-        score += 3; // 拖码在胆码未覆盖区→加分（鼓励分散）
+        score += 3 * (dm.crossZone || 1);
       }
 
       // 优化8：新增跨期形态维度（10分满分，独立性强）
@@ -552,12 +561,12 @@ export class DanTuoOptimizer {
         }
         return 0;
       })();
-      score += repeatCycleBonus;
+      score += repeatCycleBonus * (dm.crossPeriod || 1);
 
       // 维度9b：和值回归信号（3分满分）
       // 逻辑：当前胆码和值偏离均值>1.5标准差→拖码选择使总和向均值回归的号码
       const sumRegressionBonus = (() => {
-        const currentDanSum = danNumbers.reduce((a, b) => a + b, 0);
+        // 使用外层预计算的 currentDanSum，避免重复计算
         const targetTotalSum = sumTrend.avgFrontSum;
         const sumStd = sumTrend.frontStd || 30; // 和值标准差，TrendAnalyzer返回frontStd
         const currentDeviation = Math.abs(currentDanSum - targetTotalSum * danNumbers.length / 5);
@@ -576,7 +585,7 @@ export class DanTuoOptimizer {
         }
         return 0; // 偏离不大，不触发信号
       })();
-      score += sumRegressionBonus;
+      score += sumRegressionBonus * (dm.crossPeriod || 1);
 
       // 维度9c：尾数分布周期（3分满分，优化2：动态关键尾数+自适应阈值）
       // 动态识别近30期高频尾数（而非硬编码[1,2,7,8]），用自适应阈值判断热冷交替
@@ -595,7 +604,7 @@ export class DanTuoOptimizer {
         }
         return 0; // 正常范围
       })();
-      score += tailCycleBonus;
+      score += tailCycleBonus * (dm.crossPeriod || 1);
 
       return {
         number: tuoNum,
@@ -610,18 +619,17 @@ export class DanTuoOptimizer {
       };
     });
 
-    // 热号策略：区间防极端惩罚（优化3：提升至最多扣5分）- 必须在所有号码评分完成后统一计算
-    // 防止在map回调内基于不完整的tuoScores数组计算（会导致TDZ错误和评分不公平）
-    if (strategy === 'hot') {
-      tuoScores.sort((a, b) => b.score - a.score);
-      const top15ZoneCounts = {};
-      for (let z = 1; z <= 7; z++) top15ZoneCounts[z] = 0;
-      tuoScores.slice(0, 15).forEach(s => top15ZoneCounts[s.zone]++);
-      // 对所在区在Top15中占比>=4的号码统一扣5分
-      for (const s of tuoScores) {
-        if (top15ZoneCounts[s.zone] >= 4) {
-          s.score -= 5;
-        }
+    // 所有策略：区间防极端惩罚 - 必须在所有号码评分完成后统一计算
+    // 热号最多扣5分(dm=0.5→实际-2.5), 均衡/保守最多扣3分(dm=1→实际-3)
+    tuoScores.sort((a, b) => b.score - a.score);
+    const top20ZoneCounts = {};
+    for (let z = 1; z <= 7; z++) top20ZoneCounts[z] = 0;
+    tuoScores.slice(0, 20).forEach(s => top20ZoneCounts[s.zone]++);
+    const antiExtremeMax = strategy === 'hot' ? 5 : 3;
+    const zoneAntiExtremeValue = (dm.zoneAntiExtreme !== undefined ? dm.zoneAntiExtreme : 1);
+    for (const s of tuoScores) {
+      if (top20ZoneCounts[s.zone] >= 4) {
+        s.score -= antiExtremeMax * zoneAntiExtremeValue;
       }
     }
 
@@ -671,7 +679,7 @@ export class DanTuoOptimizer {
       const currentEven = allSelected.length - currentOdd;
       const targetSize = 5;
       
-      // 热号策略：防止极端奇偶比 + 区间覆盖约束
+      // 热号策略：防止极端奇偶比 + 强化区间覆盖约束
       if (strategy === 'hot' && allSelected.length >= 2) {
         if ((currentOdd === 0 && candidate.number % 2 !== 0) ||
             (currentEven === 0 && candidate.number % 2 === 0)) {
@@ -681,8 +689,16 @@ export class DanTuoOptimizer {
         // 防止拖码集中在同一区（212期拖码大部分在区4-6，缺少区2号码07）
         const coveredZones7 = new Set(allSelected.map(n => getZone(n)));
         const candidateZone7 = getZone(candidate.number);
+        
+        // 强化未覆盖区奖励：从0.3提升到0.6
         if (!coveredZones7.has(candidateZone7)) {
-          bonus += 0.3; // 未覆盖区的号码权重提升30%
+          bonus += 0.6; // 未覆盖区的号码权重提升60%（原30%）
+        }
+        
+        // 新增：过度集中惩罚 - 如果某区已有2+个号码，该区后续号码降权
+        const zoneCount = allSelected.filter(n => getZone(n) === candidateZone7).length;
+        if (zoneCount >= 2) {
+          bonus *= 0.7; // 同区已有2+个号码时，权重降至70%
         }
       }
       
@@ -744,9 +760,25 @@ export class DanTuoOptimizer {
           
       // 允许最多2对连号，超出则跳过此号码
       // 大乐透统计：约60-70%有至少1对连号，约20-30%有2对连号
+      // 改进：热号策略下，限制同区连续出现，避免过度聚集
       if (isConsecutive && consecutivePairs >= 2) {
         remaining.splice(chosenIdx, 1); // 移除不合适的号码
         continue;
+      }
+      
+      // 热号策略额外检查：防止同一区内连续选择过多号码
+      if (strategy === 'hot') {
+        const candidateZone = getZone(num);
+        const sameZoneCount = selectedTuo.filter(n => getZone(n) === candidateZone).length;
+        // 如果同区已有2个号码，且当前号码与已选号码相邻，降低优先级
+        if (sameZoneCount >= 2 && isConsecutive) {
+          // 不是直接跳过，而是降低权重后继续参与竞争
+          // 这里通过remaining.splice实现临时移除，下次循环可能重新选中
+          remaining.splice(chosenIdx, 1);
+          // 将该号码放回候选池末尾，给予较低优先级
+          remaining.push({ ...chosen, sampleWeight: chosen.sampleWeight * 0.5 });
+          continue;
+        }
       }
           
       if (isConsecutive) consecutivePairs++; 

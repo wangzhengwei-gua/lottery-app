@@ -116,10 +116,7 @@ function loadHistoryData() {
  * 获取胆码数量（与 App.jsx 中的策略配置一致）
  */
 function getDanCount(strategy) {
-  if (strategy === 'hot') return 4;
-  if (strategy === 'balanced') return 3;
-  if (strategy === 'conservative') return 3;
-  return 3;
+  return 4; // 所有策略统一4胆
 }
 
 /**

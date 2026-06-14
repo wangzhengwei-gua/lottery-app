@@ -150,7 +150,7 @@ function loadHistoryData() {
   return historyData;
 }
 
-function getDanCount(strategy) { return strategy === 'hot' ? 4 : 3; }
+function getDanCount(strategy) { return 4; }
 function getBackDanCount() { return 1; }
 
 function suppressConsole() {

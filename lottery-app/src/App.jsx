@@ -749,9 +749,8 @@ function App() {
     let frontDanProbInfo = [];
     let frontDanNote = '';
     let frontZoneInfo = '';
-    let danCount = 3;
-    if (strategy === 'hot') danCount = 4;
-    else if (strategy === 'conservative') danCount = 2;
+    // 胆码数量：所有策略统一为4个
+    let danCount = 4;
 
     try {
       // 主方案：使用多维度评分 + 加权随机采样
@@ -1455,8 +1454,11 @@ function App() {
           <div className="strategy-selector">
             <span className="strategy-label">推荐策略:</span>
             <span className="data-window-hint" style={{fontSize: '0.85em', color: '#667eea', marginLeft: '10px'}}>
-              📊 基于最近{dataWindow > 0 ? dataWindow : '全部'}期数据
+              📊 统计分析窗口: {dataWindow > 0 ? `${dataWindow}期` : '全部'} | 智能推荐: 近30期
             </span>
+            <div className="strategy-desc" style={{fontSize: '0.82em', color: '#888', margin: '6px 0 2px 0', lineHeight: '1.6'}}>
+              🔥 热号策略：追热号趋势 | ⚖️ 均衡策略：追均值回归 | 🛡️ 保守策略：追冷号回归（多维确认）
+            </div>
             <button 
               className={`strategy-btn ${recommendStrategy === 'hot' ? 'active' : ''}`}
               onClick={() => handleRecommendDanTuo('hot')}

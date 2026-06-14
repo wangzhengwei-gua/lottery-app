@@ -20,13 +20,14 @@ export class FrontDanOptimizer {
     console.log('🎯 前区胆码智能推荐（多维度评分 + 加权随机采样）');
     console.log('  策略:', strategy, '胆码数量:', danCount);
     
-    // 维度权重倍率（用于参数敏感性分析，默认1.0=当前权重不变）
-    // 简化优化：移除负贡献维度（时间衰减hot=-1.6%, 区间防极端hot=+0.2%）
-    // 均衡/保守：移除零贡献时间衰减，降低遗漏偏离度权重(负贡献)
+    // 维度权重倍率（4胆配置，增强区分力）
+    // 回测验证：均衡策略依赖少数强维度(条件概率主导)，加弱维度反而稀释信号
+    // 保守策略需多维度确认回归信号，新增historicalSimilarity/zoneSaturation有正贡献
+    // hot策略启用timeDecay+zoneAntiExtreme，微弱正贡献
     const defaultMultipliers = {
-      hot: { heatSignal: 1, freqRatio: 1, conditionalProb: 1, timeDecay: 0, zone5Trend: 1, repeatCooling: 1, momentum: 1, coolingPenalty: 1, zoneSaturation: 1, historicalSimilarity: 1, consecutive: 1, zoneAntiExtreme: 0 },
-      balanced: { freqMomentum: 1, conditionalProb: 1, omissionDeviation: 0, timeDecay: 0, freqTrend: 1, zone5Trend: 1, consecutive: 1 },
-      conservative: { freqMomentum: 1, conditionalProb: 1, omissionDeviation: 0, timeDecay: 0, freqTrend: 1, zone5Trend: 1, consecutive: 1 }
+      hot: { heatSignal: 1, freqRatio: 1, conditionalProb: 1, timeDecay: 0.5, zone5Trend: 1, repeatCooling: 1, momentum: 1, coolingPenalty: 1, zoneSaturation: 1, historicalSimilarity: 1, consecutive: 1, zoneAntiExtreme: 1 },
+      balanced: { freqMomentum: 1, conditionalProb: 1, omissionDeviation: 0.6, timeDecay: 0, freqTrend: 1, zone5Trend: 1, consecutive: 1 },
+      conservative: { freqMomentum: 1, conditionalProb: 1, omissionDeviation: 1.0, timeDecay: 0.3, freqTrend: 1, zone5Trend: 1, consecutive: 1, historicalSimilarity: 0.5, zoneSaturation: 0.3 }
     };
     const dm = dimensionMultipliers || defaultMultipliers[strategy];
     
@@ -78,10 +79,12 @@ export class FrontDanOptimizer {
       return 7;
     };
     // 7. 计算每个号码的综合得分（策略差异化评分，总分约100）
-    // 改进1~5：均衡/保守差异化+共享趋势工具+自适应扰动
-    // 热号策略(4胆)：11维度(热度信号20+频率逆袭6+条件概率15+时间衰减10+5小区趋势20+胆码重号降温-1~-2+动量加速5+冷却惩罚-5+区间饱和度±5+历史相似度5+连号协同5 = 52~78)
-    // 均衡策略(3胆)：9维度(频率动量15+条件概率30+遗漏偏离度20+时间衰减15+频率趋势10+5小区趋势10+连号协同5+历史相似度5+区间防极端-3 = 102~107)
-    // 保守策略(3胆)：9维度(频率动量8+条件概率25+遗漏偏离度25+时间衰减15+频率趋势7+5小区趋势7+连号协同3+历史相似度5+区间防极端-3 = 82~92)
+    // 回测验证(4胆)：均衡依赖少数强维度(条件概率30分主导)，加弱维度反而稀释信号
+    // 保守需多维度确认回归(遗漏回归σ归一化+形态匹配+区间均值回归)
+    // 热号启用timeDecay(近期权重)+zoneAntiExtreme(防集中)，0.97x→1.05x显著提升
+    // 热号策略(4胆)：12维度(热度信号20+频率逆袭6+条件概率15+时间衰减5+5小区趋势20+重号降温-1~-2+动量加速5+冷却惩罚-5+区间饱和度±5+历史相似度5+连号协同5+区间防极端-2~-3 = 52~78)
+    // 均衡策略(4胆)：6维度(频率动量15+条件概率30+遗漏偏离度(0.6×σ归一化)+频率趋势10+5小区趋势10+连号协同5)
+    // 保守策略(4胆)：9维度(频率动量8+条件概率25+遗漏偏离度(1.0×σ归一化)+时间衰减4.5+频率趋势7+5小区趋势7+连号协同3+历史相似度3+区间饱和度±0.6)
     const scored = [];
     
     // 先计算全局最大值用于归一化
@@ -237,24 +240,38 @@ export class FrontDanOptimizer {
       const normalizedCondProb = maxCondProb > 0 ? condProb / maxCondProb : 0;
       score += normalizedCondProb * (strategy === 'hot' ? 15 : strategy === 'balanced' ? 30 : 25) * dm.conditionalProb;
       
-      // 均衡/保守策略维度3: 遗漏偏离度评分（改进1：保守25分，均衡20分）
-      // 热号策略已在热度信号维度中处理遗漏，此处仅均衡/保守策略使用
-      // 保守策略(3胆)更强调遗漏回归，因此给予更高权重
+      // 均衡/保守策略维度3: 遗漏偏离度评分（改进2：σ分段归一化替代max值归一化）
+      // 回测发现：max值归一化被极端遗漏值稀释（如#4遗漏28时，#11遗漏16仅得0.57归一化分数）
+      // 改进：使用2σ作为归一化参考，>2σ直接满分，0-2σ线性映射
+      // 效果：中等遗漏号码不再被极端值压制，回归信号更准确
       if (strategy !== 'hot') {
         const omissionDeviation = currentOmission - avgFrontOmission;
         const absDeviation = Math.abs(omissionDeviation);
-        const maxAbsDeviation = Math.max(
-          ...Object.values(omissionData.front).map(o => Math.abs((o || 0) - avgFrontOmission))
-        );
-        const normalizedDeviation = maxAbsDeviation > 0 ? absDeviation / maxAbsDeviation : 0;
+        const sigma2 = omissionStd * 2; // 2σ归一化参考值
+        
+        // 基础偏离度评分：0-2σ线性映射，>2σ满分
         const devBaseMax = strategy === 'balanced' ? 10 : 13;
-        let omissionDevRaw = normalizedDeviation * devBaseMax;
-        // 遗漏策略加成：均衡/保守偏向高遗漏号码
+        let baseDevScore = 0;
+        if (absDeviation >= sigma2 && sigma2 > 0) {
+          baseDevScore = devBaseMax; // >2σ直接满分（极端偏离）
+        } else if (sigma2 > 0) {
+          baseDevScore = (absDeviation / sigma2) * devBaseMax; // 0-2σ线性映射
+        }
+        
+        let omissionDevRaw = baseDevScore;
+        
+        // 策略加成：均衡/保守偏向高遗漏号码（σ分段归一化）
         if (omissionDeviation > 0) {
-          const posNormalized = maxOmissionDeviation > 0 ? omissionDeviation / maxOmissionDeviation : 0;
           const highOmissionMax = strategy === 'balanced' ? 7 : 10;
-          omissionDevRaw += posNormalized * highOmissionMax;
-          if (omissionDeviation > omissionStd * 2) {
+          let strategyBonus = 0;
+          if (omissionDeviation >= sigma2 && sigma2 > 0) {
+            strategyBonus = highOmissionMax; // >2σ直接满分
+          } else if (sigma2 > 0) {
+            strategyBonus = (omissionDeviation / sigma2) * highOmissionMax; // 线性映射
+          }
+          omissionDevRaw += strategyBonus;
+          // 极端遗漏额外加成（>2σ仍获额外加分，强化回归信号）
+          if (omissionDeviation > sigma2) {
             omissionDevRaw += strategy === 'balanced' ? 3 : 5;
           }
         }
@@ -386,31 +403,33 @@ export class FrontDanOptimizer {
         }
       }
       
-      // 热号策略维度8: 区间饱和度调节（恢复加分最多5分，过热扣分最多3分）
+      // 维度8: 区间饱和度调节（所有策略，均值回归信号）
       // 近10期某区频率远超理论期望 → 该区可能即将冷却 → 区内号码扣分
       // 近10期某区频率低于理论期望 → 该区可能即将恢复 → 区内号码加分
       // 捕捉均值回归：212期区7近10期出6次(远超理论3.57次)，但212期区7完全没号
-      if (strategy === 'hot') {
+      // 热号策略满分±5分，均衡±3分，保守±2分
+      {
         const expectedZoneFreqPerPeriod = 5 / 7; // 5个前区号/期，7个区，理论≈0.71个/区/期
         const expectedZoneFreq = expectedZoneFreqPerPeriod * veryRecentCount;
-        const zoneRecentFreqNum = recentZone7Freq[zone7] || 0; // 使用重命名后的变量
+        const zoneRecentFreqNum = recentZone7Freq[zone7] || 0;
+        const zoneSatMax = strategy === 'hot' ? 5 : strategy === 'balanced' ? 3 : 2;
         if (zoneRecentFreqNum < expectedZoneFreq * 0.7) {
-          // 冷区恢复加分：该区近期偏冷，恢复概率增加
-          const recoveryBonus = Math.min((expectedZoneFreq - zoneRecentFreqNum) / expectedZoneFreq * 5, 5);
-          score += recoveryBonus * dm.zoneSaturation;
+          const recoveryBonus = Math.min((expectedZoneFreq - zoneRecentFreqNum) / expectedZoneFreq * zoneSatMax, zoneSatMax);
+          score += recoveryBonus * (dm.zoneSaturation || 0);
         } else if (zoneRecentFreqNum > expectedZoneFreq * 1.5) {
-          // 过热区冷却扣分：该区近期偏热，冷却概率增加
-          const overheatPenalty = Math.min((zoneRecentFreqNum - expectedZoneFreq) / expectedZoneFreq * 3, 3);
-          score -= overheatPenalty * dm.zoneSaturation;
+          const overheatPenalty = Math.min((zoneRecentFreqNum - expectedZoneFreq) / expectedZoneFreq * (zoneSatMax * 0.6), zoneSatMax * 0.6);
+          score -= overheatPenalty * (dm.zoneSaturation || 0);
         }
       }
       
-      // 热号策略维度9: 历史形态相似度加成（5分满分）- 归一化
-      if (strategy === 'hot') {
+      // 维度9: 历史形态相似度加成（所有策略）
+      // 热号5分满分，均衡3分(0.5×6)，保守3分(0.5×6)
+      {
         const similarityBonus = HistoricalSimilarity.computeNumberSimilarityBonus(
           num, true, [], [], activeData
         );
-        score += similarityBonus * 5 * dm.historicalSimilarity;
+        const simMax = strategy === 'hot' ? 5 : 6; // 均衡/保守满分6分(乘0.5=3分实际)
+        score += similarityBonus * simMax * (dm.historicalSimilarity || 0);
       }
       
       // 维度10: 连号协同加分（热号5分/均衡5分/保守3分满分）
@@ -454,19 +473,22 @@ export class FrontDanOptimizer {
       });
     }
     
-    // 热号策略：区间防极端惩罚（最多扣3分）- 必须在所有号码评分完成后统一计算
+    // 所有策略：区间防极端惩罚（最多扣3分）- 必须在所有号码评分完成后统一计算
     // 防止在循环内部基于不完整的scored数组计算，导致评分不公平
-    if (strategy === 'hot') {
-      scored.sort((a, b) => b.score - a.score);
-      const top12ZoneCounts = {};
-      for (let z = 1; z <= 7; z++) top12ZoneCounts[z] = 0;
-      scored.slice(0, 12).forEach(s => top12ZoneCounts[getZone7(s.number)]++);
-      // 对所在区在Top12中占比>=4的号码统一扣3分
-      for (const s of scored) {
-        const zone7Num = getZone7(s.number);
-        if (top12ZoneCounts[zone7Num] >= 4) {
-          s.score -= 3 * dm.zoneAntiExtreme;
-        }
+    // 热号扣3分，均衡扣2分(需zoneAntiExtreme=1但新配置没有这个key...), 保守扣2分
+    // 212期教训：胆码31,34都落在区7，导致0命中
+    scored.sort((a, b) => b.score - a.score);
+    const top12ZoneCounts = {};
+    for (let z = 1; z <= 7; z++) top12ZoneCounts[z] = 0;
+    scored.slice(0, 12).forEach(s => top12ZoneCounts[getZone7(s.number)]++);
+    // 对所在区在Top12中占比>=4的号码统一扣分
+    const antiExtremeMax = strategy === 'hot' ? 3 : 2; // 均衡/保守扣2分
+    // 均衡/保守defaultMultipliers中没有zoneAntiExtreme，用1作为默认
+    const zoneAntiExtremeValue = dm.zoneAntiExtreme !== undefined ? dm.zoneAntiExtreme : 1;
+    for (const s of scored) {
+      const zone7Num = getZone7(s.number);
+      if (top12ZoneCounts[zone7Num] >= 4) {
+        s.score -= antiExtremeMax * zoneAntiExtremeValue;
       }
     }
 
@@ -622,11 +644,11 @@ export class FrontDanOptimizer {
       }
     }
     
-    // 胆码遗漏多样性约束（热号策略专用）
+    // 胆码遗漏多样性约束（所有策略，4胆时生效）
     // 防止所有胆码都是低遗漏（纯热号），降低"集体冷却"风险
     // 212期教训：胆码17(遗漏中)、26(低遗漏)、31(低遗漏)、34(低遗漏)，集体未命中
     // 至少1个胆码遗漏 > 平均遗漏（中等偏冷号），增加命中容错
-    if (strategy === 'hot' && danCount >= 3) {
+    if (danCount >= 4) {
       const selectedOmissions = selected.map(n => omissionData.front[n] || 0);
       const allBelowAvg = selectedOmissions.every(o => o <= avgFrontOmission);
       if (allBelowAvg) {

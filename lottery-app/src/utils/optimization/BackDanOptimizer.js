@@ -16,13 +16,14 @@ export class BackDanOptimizer {
   static optimize(analyzer, backDanCount = 1, strategy = 'balanced', dimensionMultipliers = null) {
     console.log('🎯 后区胆码智能推荐（多维度评分）');
     
-    // 维度权重倍率（简化优化：移除负贡献维度）
-    // hot后区：freqMomentum含恒热反馈(-4.3%)→仅保留频率+动量不含恒热
-    // hot/balanced后区：频率趋势有负贡献→移除
+    // 维度权重倍率（策略差异化 + 遗漏σ分段归一化）
+    // 热号：追趋势，条件概率1.2倍+4小区+重号+冷却惩罚全开
+    // 均衡：少数强维度，条件概率+4小区主导，不加弱维度（与前区设计原则一致）
+    // 保守：多维确认回归，遗漏回归0.8+条件概率降0.7+冷却惩罚0.3
     const defaultMultipliers = {
-      hot: { conditionalProb: 1, omissionDeviation: 1, freqMomentum: 1, timeDecay: 1, freqTrend: 0, zone4Trend: 1, repeatFactor: 1, coolingPenalty: 1 },
-      balanced: { conditionalProb: 1, omissionDeviation: 1, freqMomentum: 1, timeDecay: 1, freqTrend: 0, zone4Trend: 1 },
-      conservative: { conditionalProb: 1, omissionDeviation: 1, freqMomentum: 1, timeDecay: 1, freqTrend: 0, zone4Trend: 1 }
+      hot: { conditionalProb: 1, omissionDeviation: 1, freqMomentum: 1, timeDecay: 1, freqTrend: 0, zone4Trend: 1, repeatFactor: 1, coolingPenalty: 1, zoneAntiExtreme: 0.5 },
+      balanced: { conditionalProb: 1, omissionDeviation: 1, freqMomentum: 1, timeDecay: 1, freqTrend: 0, zone4Trend: 1, coolingPenalty: 0, zoneAntiExtreme: 1 },
+      conservative: { conditionalProb: 0.8, omissionDeviation: 1, freqMomentum: 0.8, timeDecay: 0.5, freqTrend: 0, zone4Trend: 1, coolingPenalty: 0.2, zoneAntiExtreme: 1 }
     };
     const dm = dimensionMultipliers || defaultMultipliers[strategy];
     const conditionalProb = analyzer.conditionalProbability.calculateConditionalProbability();
@@ -78,9 +79,10 @@ export class BackDanOptimizer {
     const backZone4Log = formatZonePredictionLog(backZone4Prediction, backZone4Absence, backZone4Trend, 4, zone4RangeFormatter, '后区4小区');
     console.log('  📊 后区4小区动态趋势:', backZone4Log);
 
-    // 6. 计算每个号码的综合得分（改进4~5：共享趋势工具+自适应扰动）
-    // 热号策略8维度：条件概率15 + 遗漏偏离度20 + 频率+动量15(含热号恒热+5) + 时间衰减10 + 频率趋势10 + 4小区趋势18 + 重号因子10 + 冷却惩罚扣5 = 78~98
-    // 均衡/保守策略6维度：条件概率20 + 遗漏偏离度20 + 频率+动量15 + 时间衰减15 + 频率趋势15 + 4小区趋势15 = 100
+    // 6. 计算每个号码的综合得分（策略差异化 + dm维度控制）
+    // 热号7维度: 条件概率15 + 遗漏σ归一 + 频率动量15 + 时间衰减10 + 4小区趋势 + 重号因子 + 冷却惩罚-5 + zoneAntiExtreme0.5
+    // 均衡5维度: 条件概率20 + 遗漏σ归一 + 频率动量15 + 时间衰减15 + 4小区趋势 + zoneAntiExtreme1
+    // 保守5维度: 条件概率×0.8 + 遗漏σ归一 + 频率动量15 + 时间衰减15 + 4小区趋势 + zoneAntiExtreme1
     const scored = [];
     for (let num = 1; num <= CONFIG.BACK_RANGE; num++) {
       let score = 0;
@@ -95,23 +97,20 @@ export class BackDanOptimizer {
       const normalizedCondProb = maxCondProb > 0 ? condProb / maxCondProb : 0;
       score += normalizedCondProb * (strategy === 'hot' ? 15 : 20) * dm.conditionalProb;
             
-      // 维度2: 遗漏回归评分（20分满分）
-      // 逻辑：适度遗漏最佳（既不太热也不太冷），符合均值回归原理
+      // 维度2: 遗漏回归评分（σ分段归一化，与前区同步）
+      // 逻辑：0-2σ线性映射(0→10分)，>2σ满分10分，避免极端遗漏压缩区分度
       const currentOmission = omissionData.back[num] || 0;
       const omissionDeviation = currentOmission - avgBackOmission;
       const absDeviation = Math.abs(omissionDeviation);
       
-      // 预计算最大偏离度（用于归一化）
-      const maxAbsDeviation = Math.max(
-        ...Object.values(omissionData.back).map(o => Math.abs((o || 0) - avgBackOmission))
-      );
-      
-      // 适度遗漏得分：偏离均值越近得分越高（10分满分）
-      const normalizedOmission = maxAbsDeviation > 0 ? 1 - (absDeviation / maxAbsDeviation) : 0;
-      let omissionDevRaw = normalizedOmission * 10;
-      // 策略加成（10分）：
+      // σ分段归一化：偏离度/2σ → 映射到0-10分
+      const omissionNormalized = omissionStd > 0 ? Math.min(absDeviation / (2 * omissionStd), 1) : 0;
+      // 适度遗漏得分：偏离均值越近得分越高（反向映射）
+      let omissionDevRaw = (1 - omissionNormalized) * 10;
+      // 策略加成（10分满分）：
       // - 热号策略：偏向低遗漏（近期刚开出的号码）
-      // - 均衡/保守策略：偏向高遗漏（冷号回归）
+      // - 均衡策略：偏向高遗漏（冷号回归），但6分上限（不如保守侧重）
+      // - 保守策略：偏向高遗漏（冷号回归），8分上限（最侧重遗漏回归）
       if (strategy === 'hot') {
         if (omissionDeviation < 0) {
           // 热号策略：遗漏越低得分越高
@@ -124,15 +123,34 @@ export class BackDanOptimizer {
           const hotness = maxNegDeviation > 0 ? Math.abs(omissionDeviation) / maxNegDeviation : 0;
           omissionDevRaw += hotness * 10;
         }
-      } else {
+      } else if (strategy === 'conservative') {
+        // 保守策略：高遗漏回归加分（8分上限）
         if (omissionDeviation > 0) {
           const maxPosDeviation = Math.max(...Object.values(omissionData.back).map(o => (o || 0) - avgBackOmission).filter(d => d > 0));
           const posNormalized = maxPosDeviation > 0 ? omissionDeviation / maxPosDeviation : 0;
-          let strategyBonus = posNormalized * 7;
+          let strategyBonus = posNormalized * 5; // 保守5分基础加成
           if (omissionDeviation > omissionStd * 2) {
-            strategyBonus += 3;
+            strategyBonus += 3; // >2σ额外+3分
           }
-          // 频率惩罚：低频号码(11、12)的遗漏回归得分打折
+          // 频率惩罚：低频号码的遗漏回归得分打折
+          const totalBackFreq = Object.values(backCounter).reduce((sum, f) => sum + f, 0);
+          const globalFreqRatio = totalBackFreq > 0 ? freq / totalBackFreq : 0;
+          const avgFreqRatio = 1 / CONFIG.BACK_RANGE;
+          if (globalFreqRatio < avgFreqRatio) {
+            strategyBonus *= globalFreqRatio / avgFreqRatio;
+          }
+          omissionDevRaw += strategyBonus;
+        }
+      } else {
+        // 均衡策略：适度遗漏回归加分（6分上限，不如保守侧重）
+        if (omissionDeviation > 0) {
+          const maxPosDeviation = Math.max(...Object.values(omissionData.back).map(o => (o || 0) - avgBackOmission).filter(d => d > 0));
+          const posNormalized = maxPosDeviation > 0 ? omissionDeviation / maxPosDeviation : 0;
+          let strategyBonus = posNormalized * 4; // 均衡4分基础加成
+          if (omissionDeviation > omissionStd * 2) {
+            strategyBonus += 2; // >2σ额外+2分
+          }
+          // 频率惩罚
           const totalBackFreq = Object.values(backCounter).reduce((sum, f) => sum + f, 0);
           const globalFreqRatio = totalBackFreq > 0 ? freq / totalBackFreq : 0;
           const avgFreqRatio = 1 / CONFIG.BACK_RANGE;
@@ -144,7 +162,7 @@ export class BackDanOptimizer {
       }
       score += omissionDevRaw * dm.omissionDeviation;
             
-      // 维度3: 频率+动量得分（15分满分）+ 热号恒热正向反馈
+      // 维度3: 频率+动量得分（dm.freqMomentum乘数控制）
       const freqBase = maxFreq > 0 ? (freq / maxFreq) * 10 : 0; // 基础频率 10分
       const momentum = recentFreq.backMomentum[num] || 0;
       const maxMomentum = Math.max(...Object.values(recentFreq.backMomentum).map(m => Math.abs(m)));
@@ -153,14 +171,11 @@ export class BackDanOptimizer {
       // [简化] 移除热号恒热正向反馈：回测显示该逻辑贡献-4.3%（拖累命中率）
       score += freqScore * dm.freqMomentum;
             
-      // 维度4: 时间衰减得分（热号10分，均衡/保守15分）- 已归一化
+      // 维度4: 时间衰减得分（dm.timeDecay乘数控制）
       const timeWeight = timeWeights[num] || 0;
       score += timeWeight * (strategy === 'hot' ? 10 : 15) * dm.timeDecay;
             
-      // 维度5: 频率趋势加分（热号10分，均衡/保守15分）
-      // 按项目设计决策：取消区间均衡补偿，改为基于历史频率的趋势加分
-      // 频率高于期望值(≈0.167)的号码按比例加分，低于期望值的不加分
-      // 从原(热号15/均衡20)降分，释放5分给4小区动态趋势维度6
+      // 维度5: 频率趋势加分（dm.freqTrend乘数控制，当前全策略禁用=0）
       const freqRate = freqRates[num];
       const freqTrendMax = strategy === 'hot' ? 10 : 15;
       if (freqRate > expectedRate && maxFreqRate > expectedRate) {
@@ -168,65 +183,46 @@ export class BackDanOptimizer {
         score += normalizedTrend * freqTrendMax * dm.freqTrend;
       }
       
-      // 维度6: 4小区动态趋势加分（优化5：热号提升至18分，均衡/保守15分）
+      // 维度6: 4小区动态趋势加分（dm.zone4Trend乘数控制）
       // 数据支撑: 85.4%恰好2个4小区出号, 连续不出2期后100%回归
       // must区回归概率接近100%，加分必须足以让must区号码进入Top候选
-      // 优化5：must加分10→18分，条件概率降5分释放空间，确保must区号码不被压制
-      // must: +18分 - 胆码从必出区选命中率极高
-      // very_likely: +12分
-      // likely_warm: +6分
-      // warming: +3分
-      // unlikely_cool: -8分 - 强化降温惩罚
       const backZone4 = getBackZone4(num);
       const backPrediction = backZone4Prediction[backZone4];
-      if (strategy === 'hot') {
-        if (backPrediction === 'must') score += 18 * dm.zone4Trend;
-        else if (backPrediction === 'very_likely') score += 12 * dm.zone4Trend;
-        else if (backPrediction === 'likely_warm') score += 6 * dm.zone4Trend;
-        else if (backPrediction === 'warming') score += 3 * dm.zone4Trend;
-        else if (backPrediction === 'unlikely_cool') score -= 8 * dm.zone4Trend;
-      } else {
-        if (backPrediction === 'must') score += 15 * dm.zone4Trend;
-        else if (backPrediction === 'very_likely') score += 10 * dm.zone4Trend;
-        else if (backPrediction === 'likely_warm') score += 5 * dm.zone4Trend;
-        else if (backPrediction === 'warming') score += 2 * dm.zone4Trend;
-        else if (backPrediction === 'unlikely_cool') score -= 5 * dm.zone4Trend;
-      }
+      if (backPrediction === 'must') score += (strategy === 'hot' ? 18 : 15) * dm.zone4Trend;
+      else if (backPrediction === 'very_likely') score += (strategy === 'hot' ? 12 : 10) * dm.zone4Trend;
+      else if (backPrediction === 'likely_warm') score += (strategy === 'hot' ? 6 : 5) * dm.zone4Trend;
+      else if (backPrediction === 'warming') score += (strategy === 'hot' ? 3 : 2) * dm.zone4Trend;
+      else if (backPrediction === 'unlikely_cool') score -= (strategy === 'hot' ? 8 : 5) * (dm.zone4Trend + (dm.zoneAntiExtreme || 0));
       
-      // 热号策略维度7: 重号因子（10分满分，均值回归调节）
+      // 维度7: 重号因子（热号策略专属，dm.repeatFactor控制）
       // 大乐透后区约25-35%重号率，上期出现的号码本期更可能再出
       // 但高重复周期后往往出现低重复期（均值回归），需动态调整
-      let backRepeatWeight = 10; // 默认满分（维度设计满分10分）
-      if (strategy === 'hot' && activeData.length >= 2) {
-        const lastBackRepeatCount = activeData[activeData.length - 1].back.filter(
-          n => activeData[activeData.length - 2].back.includes(n)
-        ).length;
-        if (lastBackRepeatCount >= 1) {
-          backRepeatWeight = 7; // 上期有重号→降低到7分（均值回归概率）
-        }
-        if (lastBackRepeatCount === 0) {
-          backRepeatWeight = 10; // 上期0重号→保持满分10分（反弹信号），不再超过维度满分
-        }
-      }
       if (strategy === 'hot') {
+        let backRepeatWeight = 10;
+        if (activeData.length >= 2) {
+          const lastBackRepeatCount = activeData[activeData.length - 1].back.filter(
+            n => activeData[activeData.length - 2].back.includes(n)
+          ).length;
+          if (lastBackRepeatCount >= 1) backRepeatWeight = 7;
+          if (lastBackRepeatCount === 0) backRepeatWeight = 10;
+        }
         if (lastDraw && lastDraw.back.includes(num)) {
           score += Math.min(repeatAnalysis.backRepeatRate * backRepeatWeight, backRepeatWeight) * dm.repeatFactor;
         }
       }
       
-      // 热号策略维度8: 冷却惩罚（最多扣5分）
+      // 维度8: 冷却惩罚（所有策略，dm.coolingPenalty控制）
       // 高频号且当前遗漏 > 平均遗漏 → 正在冷却 → 扣分
-      if (strategy === 'hot') {
-        const totalBackFreq = Object.values(backCounter).reduce((a, b) => a + b, 0);
-        const avgFreqPerNum = totalBackFreq / CONFIG.BACK_RANGE;
-        if (freq > avgFreqPerNum && currentOmission > avgBackOmission) {
-          const coolingDegree = (currentOmission - avgBackOmission) / avgBackOmission;
-          const freqHeat = freq / avgFreqPerNum;
-          const penalty = Math.min(coolingDegree * freqHeat * 2, 5);
-          score -= penalty * dm.coolingPenalty;
-        }
+      const totalBackFreq = Object.values(backCounter).reduce((a, b) => a + b, 0);
+      const avgFreqPerNum = totalBackFreq / CONFIG.BACK_RANGE;
+      if (freq > avgFreqPerNum && currentOmission > avgBackOmission) {
+        const coolingDegree = (currentOmission - avgBackOmission) / avgBackOmission;
+        const freqHeat = freq / avgFreqPerNum;
+        const maxPenalty = strategy === 'hot' ? 5 : 3; // 热号最多扣5分，均衡/保守最多扣3分
+        const penalty = Math.min(coolingDegree * freqHeat * 2, maxPenalty);
+        score -= penalty * (dm.coolingPenalty || 0);
       }
-      
+
       scored.push({
         number: num,
         score,
@@ -247,7 +243,7 @@ export class BackDanOptimizer {
     // 后区胆码重号风险缓解：胆码是上期出现的号码→重号依赖风险极高
     // 后区胆码1不命中=全军覆没，推荐重号等于赌“它会连续出现”
     // 条件概率更高的非重号通常更可靠（如#5条件概率0.168 >> #10的0.076）
-    if (strategy === 'hot' && backDanCount >= 1 && lastDraw) {
+    if (backDanCount >= 1 && lastDraw) {
       // 只要推荐的第一名是上期重号，就考虑降级风险
       // 不再依赖上期重号率判断，直接检查胆码本身是否是重号
       if (lastDraw.back.includes(selected[0])) {
@@ -283,7 +279,7 @@ export class BackDanOptimizer {
     
     console.log('✅ 后区胆码推荐完成:', selected.sort((a, b) => a - b));
     console.log('  实际选择:', selected.map(n => `#${n}`).join(', '), '(确定性推荐)');
-    if (strategy === 'hot' && lastDraw) {
+    if (lastDraw) {
       const repeatNums = selected.filter(n => lastDraw.back.includes(n));
       if (repeatNums.length > 0) console.log('  含重号:', repeatNums.map(n => `#${n}`).join(', '));
     }
