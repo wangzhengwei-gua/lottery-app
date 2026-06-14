@@ -4704,7 +4704,15 @@ button.success {
     font-weight: 500 !important;
   }
   
+  .elimination-options select {
+    background-color: #ffffff !important;
+    color: #333 !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+  }
+  
   .elimination-options select option {
+    background-color: #ffffff !important;
     color: #333 !important;
   }
   
@@ -4763,6 +4771,11 @@ button.success {
   }
   
   .elimination-options label {
+    color: #333 !important;
+  }
+  
+  .elimination-options select {
+    background-color: #ffffff !important;
     color: #333 !important;
   }
   

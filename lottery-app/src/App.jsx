@@ -2358,7 +2358,9 @@ function App() {
             background: '#fff8f0',
             borderRadius: '8px',
             border: '1px solid #ffecd2',
-            color: '#333'
+            color: '#333',
+            position: 'relative',
+            zIndex: 2
           }}>
             <div style={{fontWeight: 'bold', color: '#e67e22', marginBottom: '8px'}}>⚙️ 杀号参数配置</div>
             <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px'}}>
@@ -2584,12 +2586,14 @@ function App() {
               {/* 杀号摘要 */}
               <div className="elimination-summary" style={{
                 padding: '10px',
-                background: '#f0f4ff',
+                background: '#e3f2fd',
                 borderRadius: '6px',
                 marginBottom: '12px',
                 fontSize: '0.9em',
                 fontWeight: '500',
-                color: '#333'
+                color: '#333',
+                position: 'relative',
+                zIndex: 2
               }}>
                 {eliminationResult.summary}
               </div>
@@ -2651,11 +2655,14 @@ function App() {
                 <div className="debug-info" style={{
                   marginTop: '12px',
                   padding: '12px',
-                  background: '#f8f4ff',
+                  background: '#ffffff',
                   borderRadius: '8px',
                   border: '1px dashed #9b59b6',
                   fontSize: '0.8em',
-                  color: '#333'
+                  color: '#333',
+                  position: 'relative',
+                  zIndex: 2,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                 }}>
                   <div style={{fontWeight: 'bold', marginBottom: '8px', color: '#7b1fa2'}}>🐛 调试信息</div>
                   
