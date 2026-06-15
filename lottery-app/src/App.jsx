@@ -1341,9 +1341,18 @@ function App() {
       alert('请先生成复式组合！');
       return;
     }
-    const frontStr = fushiResult.frontPool.map(n => n.toString().padStart(2, '0')).join(' ');
-    const backStr = fushiResult.backPool.map(n => n.toString().padStart(2, '0')).join(' ');
-    const text = `${frontStr} | ${backStr}`;
+    const frontStr = fushiResult.frontPool.map(n => n.toString().padStart(2, '0')).join(', ');
+    const backStr = fushiResult.backPool.map(n => n.toString().padStart(2, '0')).join(', ');
+      
+    let text = `【前区复式】\n`;
+    text += `号码：${frontStr}\n`;
+    text += `选号方式：${fushiResult.frontPool.length}个选${fushiResult.frontCount}\n`;
+    text += `\n【后区复式】\n`;
+    text += `号码：${backStr}\n`;
+    text += `选号方式：${fushiResult.backPool.length}个选${fushiResult.backCount}\n`;
+    text += `\n注数：${fushiResult.totalBets}注\n`;
+    text += `费用：${fushiResult.cost}元\n`;
+      
     navigator.clipboard.writeText(text).then(() => {
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
@@ -1351,7 +1360,7 @@ function App() {
       console.error('复制失败:', err);
       alert('复制失败，请手动复制');
     });
-  }; 
+  };
 
   const formatPredictions = () => {
     if (predictions.length === 0) return '';
@@ -2980,14 +2989,14 @@ function App() {
                   <div style={{padding: '15px', background: '#f8f9fa', borderRadius: '8px', marginTop: '10px'}}>
                     <div style={{marginBottom: '8px'}}>
                       <span style={{color: '#e74c3c', fontWeight: 'bold', marginRight: '8px'}}>前区:</span>
-                      <span style={{fontSize: '1.1em', fontFamily: 'monospace'}}>
+                      <span style={{fontSize: '1.1em', fontFamily: 'monospace', color: '#333'}}>
                         {fushiResult.frontPool.map(n => n.toString().padStart(2, '0')).join(' ')}
                       </span>
                       <span style={{color: '#555', marginLeft: '6px', fontSize: '0.85em'}}>({fushiResult.frontPool.length}个选{fushiResult.frontCount})</span>
                     </div>
                     <div>
                       <span style={{color: '#3498db', fontWeight: 'bold', marginRight: '8px'}}>后区:</span>
-                      <span style={{fontSize: '1.1em', fontFamily: 'monospace'}}>
+                      <span style={{fontSize: '1.1em', fontFamily: 'monospace', color: '#333'}}>
                         {fushiResult.backPool.map(n => n.toString().padStart(2, '0')).join(' ')}
                       </span>
                       <span style={{color: '#555', marginLeft: '6px', fontSize: '0.85em'}}>({fushiResult.backPool.length}个选{fushiResult.backCount})</span>
