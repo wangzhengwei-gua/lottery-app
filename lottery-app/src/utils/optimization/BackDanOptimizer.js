@@ -1,6 +1,6 @@
 /**
  * 后区胆码智能推荐优化器
- * 融合：条件概率 + 遗漏回归 + 时间衰减 + 频率 + 区间分布
+ * 融合：条件概率 + 遗漏回归 + 时间衰减 + 频率 + 区间分布 + 和值回归
  */
 
 import { CONFIG } from '../core/Config.js';
@@ -22,9 +22,9 @@ export class BackDanOptimizer {
     // 均衡：少数强维度，条件概率+4小区主导，不加弱维度（与前区设计原则一致）
     // 保守：多维确认回归，遗漏回归0.8+条件概率降0.7+冷却惩罚0.3
     const defaultMultipliers = {
-      hot: { conditionalProb: 1, omissionDeviation: 1, freqMomentum: 1, timeDecay: 1, freqTrend: 0, zone4Trend: 1, repeatFactor: 1, coolingPenalty: 1, zoneAntiExtreme: 0.5 },
-      balanced: { conditionalProb: 1, omissionDeviation: 1, freqMomentum: 1, timeDecay: 1, freqTrend: 0, zone4Trend: 1, coolingPenalty: 0, zoneAntiExtreme: 1 },
-      conservative: { conditionalProb: 0.8, omissionDeviation: 1, freqMomentum: 0.8, timeDecay: 0.5, freqTrend: 0, zone4Trend: 1, coolingPenalty: 0.2, zoneAntiExtreme: 1 }
+      hot: { conditionalProb: 1, omissionDeviation: 1, freqMomentum: 1, timeDecay: 1, freqTrend: 0, zone4Trend: 1, repeatFactor: 1, coolingPenalty: 1, zoneAntiExtreme: 0.5, sumRegression: 1 },
+      balanced: { conditionalProb: 1, omissionDeviation: 1, freqMomentum: 1, timeDecay: 1, freqTrend: 0, zone4Trend: 1, coolingPenalty: 0, zoneAntiExtreme: 1, sumRegression: 1 },
+      conservative: { conditionalProb: 0.8, omissionDeviation: 1, freqMomentum: 0.8, timeDecay: 0.5, freqTrend: 0, zone4Trend: 1, coolingPenalty: 0.2, zoneAntiExtreme: 1, sumRegression: 0.8 }
     };
     const dm = dimensionMultipliers || defaultMultipliers[strategy];
     const conditionalProb = analyzer.conditionalProbability.calculateConditionalProbability();
@@ -79,6 +79,17 @@ export class BackDanOptimizer {
     const zone4RangeFormatter = (z) => z <= 3 ? `${(z-1)*3+1}-${z*3}` : '10-12';
     const backZone4Log = formatZonePredictionLog(backZone4Prediction, backZone4Absence, backZone4Trend, 4, zone4RangeFormatter, '后区4小区');
     console.log('  📊 后区4小区动态趋势:', backZone4Log);
+
+    // === 和值趋势数据（和值回归维度） ===
+    // 后区和值理想均值≈13，单号理想贡献≈6.5
+    // 近期和值偏高→偏低号码加分，近期和值偏低→偏高号码加分
+    const sumTrendData = analyzer.trendAnalyzer.analyzeSumTrend();
+    const avgBackSum = sumTrendData.avgBackSum;
+    const idealBackPerNum = avgBackSum / CONFIG.BACK_COUNT;
+    const recent5BackSums = sumTrendData.recentBackSums.slice(-5);
+    const recent5BackAvg = recent5BackSums.length > 0 ? recent5BackSums.reduce((a,b) => a+b, 0) / recent5BackSums.length : avgBackSum;
+    const backSumBias = recent5BackAvg - avgBackSum;
+    console.log('  📊 和值趋势: 近5期均值' + recent5BackAvg.toFixed(1) + '(偏差' + backSumBias.toFixed(1) + '), 理想单号贡献≈' + idealBackPerNum.toFixed(1));
 
     // 6. 计算每个号码的综合得分（策略差异化 + dm维度控制）
     // 热号7维度: 条件概率15 + 遗漏σ归一 + 频率动量15 + 时间衰减10 + 4小区趋势 + 重号因子 + 冷却惩罚-5 + zoneAntiExtreme0.5
@@ -241,6 +252,21 @@ export class BackDanOptimizer {
 
       // 斐波那契号码结构加分：后区斐波那契数{1,2,3,5,8}出现频率有统计规律
       if (FIB_BACK.includes(num)) score += 0.5;
+
+      // 维度9: 和值趋势回归（近期后区和值偏离→号码值反向加分）
+      const backSumMax = strategy === 'hot' ? 5 : strategy === 'balanced' ? 6 : 5;
+      let backSumRegScore = 0;
+      if (Math.abs(backSumBias) > 3) {
+        const normalizedBias = Math.min(Math.abs(backSumBias) / 8, 1);
+        if (backSumBias > 0 && num < idealBackPerNum) {
+          const deviation = (idealBackPerNum - num) / idealBackPerNum;
+          backSumRegScore = normalizedBias * Math.min(deviation * 0.5, 0.8) * backSumMax;
+        } else if (backSumBias < 0 && num > idealBackPerNum) {
+          const deviation = (num - idealBackPerNum) / idealBackPerNum;
+          backSumRegScore = normalizedBias * Math.min(deviation * 0.5, 0.8) * backSumMax;
+        }
+      }
+      score += backSumRegScore * dm.sumRegression;
 
       scored.push({
         number: num,

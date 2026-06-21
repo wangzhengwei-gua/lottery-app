@@ -4,25 +4,25 @@ import { goldenRegressionBonus, fibonacciRhythmBonus, goldenSumTarget, fibonacci
 
 export class FrontDanOptimizer {
   /**
-   * 优化前区胆码推荐（P1精简：4维度评分 + 黄金/斐波那契增强 + 加权随机采样）
-   * 热号：heatSignal + zone5Trend + repeatCooling + momentum
-   * 均衡/保守：freqMomentum + conditionalProb + omissionDeviation(+黄金回归+斐波那契节奏) + zone5Trend
+   * 优化前区胆码推荐（P1精简：5维度评分 + 黄金/斐波那契增强 + 加权随机采样）
+   * 热号：heatSignal + zone5Trend + repeatCooling + momentum + sumRegression
+   * 均衡/保守：freqMomentum + conditionalProb + omissionDeviation(+黄金回归+斐波那契节奏) + zone5Trend + sumRegression
    * @param {Object} analyzer - LotteryAnalyzer实例
    * @param {number} danCount - 需要推荐的胆码数量（2-4）
    * @param {string} strategy - 策略：hot/balanced/conservative
    * @returns {Object} { selected: number[], probabilityInfo: Object[] }
    */
   static optimize(analyzer, danCount = 3, strategy = 'hot', dimensionMultipliers = null) {
-    console.log('🎯 前区胆码智能推荐（4维度评分 + 黄金/斐波那契增强）');
+    console.log('🎯 前区胆码智能推荐（5维度评分 + 黄金/斐波那契增强 + 和值回归）');
     console.log('  策略:', strategy, '胆码数量:', danCount);
     
-    // P1维度精简：从12维度→4维度，删除噪音/重叠维度
-    // 热号：heatSignal+zone5Trend+repeatCooling+momentum（纯短期信号）
-    // 均衡/保守：freqMomentum+conditionalProb+omissionDeviation+zone5Trend
+    // P1维度精简：从12维度→5维度，删除噪音/重叠维度
+    // 热号：heatSignal+zone5Trend+repeatCooling+momentum+sumRegression（纯短期信号+和值回归）
+    // 均衡/保守：freqMomentum+conditionalProb+omissionDeviation+zone5Trend+sumRegression
     const defaultMultipliers = {
-      hot: { heatSignal: 2.0, zone5Trend: 1.0, repeatCooling: 1.0, momentum: 2.0 },
-      balanced: { freqMomentum: 1, conditionalProb: 1, omissionDeviation: 1.0, zone5Trend: 1 },
-      conservative: { freqMomentum: 1, conditionalProb: 0.8, omissionDeviation: 1.0, zone5Trend: 1 }
+      hot: { heatSignal: 2.0, zone5Trend: 1.0, repeatCooling: 1.0, momentum: 2.0, sumRegression: 1 },
+      balanced: { freqMomentum: 1, conditionalProb: 1, omissionDeviation: 1.0, zone5Trend: 1, sumRegression: 1 },
+      conservative: { freqMomentum: 1, conditionalProb: 0.8, omissionDeviation: 1.0, zone5Trend: 1, sumRegression: 0.8 }
     };
     const dm = dimensionMultipliers || defaultMultipliers[strategy];
     
@@ -70,6 +70,16 @@ export class FrontDanOptimizer {
     
     const zone5Log = formatZonePredictionLog(zone5Prediction, zone5Absence, zone5Trend, 5, (z) => `${(z-1)*7+1}-${z*7}`, '5小区');
     console.log('  📊 5小区动态趋势预测:', zone5Log);
+    
+    // === 和值趋势数据（维度5: 和值回归信号） ===
+    // 核心逻辑：近期和值偏高→偏低号码加分（回归低值），近期和值偏低→偏高号码加分
+    const sumTrendData = analyzer.trendAnalyzer.analyzeSumTrend();
+    const avgFrontSum = sumTrendData.avgFrontSum;
+    const idealPerNum = avgFrontSum / CONFIG.FRONT_COUNT;
+    const recent5Sums = sumTrendData.recentFrontSums.slice(-5);
+    const recent5Avg = recent5Sums.length > 0 ? recent5Sums.reduce((a,b) => a+b, 0) / recent5Sums.length : avgFrontSum;
+    const frontSumBias = recent5Avg - avgFrontSum;
+    console.log('  📊 和值趋势: 近5期均值' + recent5Avg.toFixed(1) + '(偏差' + frontSumBias.toFixed(1) + '), 理想单号贡献≈' + idealPerNum.toFixed(1));
     
     // 5. 计算每个号码的综合得分（4维度精简版）
     const scored = [];
@@ -145,6 +155,22 @@ export class FrontDanOptimizer {
           score += momentumScore;
           dims.momentum = momentumScore;
         }
+        
+        // 维度5: 和值趋势回归（近期和值偏离→号码值反向加分）
+        const hotSumMax = 5;
+        let hotSumRegScore = 0;
+        if (Math.abs(frontSumBias) > 5) {
+          const normalizedBias = Math.min(Math.abs(frontSumBias) / 15, 1);
+          if (frontSumBias > 0 && num < idealPerNum) {
+            const deviation = (idealPerNum - num) / idealPerNum;
+            hotSumRegScore = normalizedBias * Math.min(deviation * 0.5, 0.8) * hotSumMax;
+          } else if (frontSumBias < 0 && num > idealPerNum) {
+            const deviation = (num - idealPerNum) / idealPerNum;
+            hotSumRegScore = normalizedBias * Math.min(deviation * 0.5, 0.8) * hotSumMax;
+          }
+        }
+        score += hotSumRegScore * dm.sumRegression;
+        dims.sumRegression = hotSumRegScore * dm.sumRegression;
       } else {
         // === 均衡/保守策略4维度 ===
         // 维度1: 频率+动量 × dm.freqMomentum
@@ -230,6 +256,22 @@ export class FrontDanOptimizer {
         else if (prediction === 'unlikely_cool') zone5Score = zone5Cool;
         score += zone5Score * dm.zone5Trend;
         dims.zone5Trend = zone5Score * dm.zone5Trend;
+        
+        // 维度5: 和值趋势回归（近期和值偏离→号码值反向加分）
+        const balConSumMax = strategy === 'balanced' ? 8 : 6;
+        let balConSumRegScore = 0;
+        if (Math.abs(frontSumBias) > 5) {
+          const normalizedBias = Math.min(Math.abs(frontSumBias) / 15, 1);
+          if (frontSumBias > 0 && num < idealPerNum) {
+            const deviation = (idealPerNum - num) / idealPerNum;
+            balConSumRegScore = normalizedBias * Math.min(deviation * 0.5, 0.8) * balConSumMax;
+          } else if (frontSumBias < 0 && num > idealPerNum) {
+            const deviation = (num - idealPerNum) / idealPerNum;
+            balConSumRegScore = normalizedBias * Math.min(deviation * 0.5, 0.8) * balConSumMax;
+          }
+        }
+        score += balConSumRegScore * dm.sumRegression;
+        dims.sumRegression = balConSumRegScore * dm.sumRegression;
       }
 
       scored.push({
@@ -533,6 +575,7 @@ export class FrontDanOptimizer {
         if (d.zone5Trend) parts.push(`区趋${d.zone5Trend.toFixed(1)}`);
         if (d.repeatCooling) parts.push(`重号${d.repeatCooling.toFixed(1)}`);
         if (d.momentum) parts.push(`动量${d.momentum.toFixed(1)}`);
+        if (d.sumRegression) parts.push(`和值${d.sumRegression.toFixed(1)}`);
         return `#${s.number}(${parts.join('+')})`;
       }).join(', '));
     } else {
@@ -548,6 +591,7 @@ export class FrontDanOptimizer {
         if (d.moderateRecovery) parts.push(`中间${d.moderateRecovery.toFixed(1)}`);
         if (d.recentAppearance) parts.push(`近期${d.recentAppearance.toFixed(1)}`);
         if (d.zone5Trend) parts.push(`区趋${d.zone5Trend.toFixed(1)}`);
+        if (d.sumRegression) parts.push(`和值${d.sumRegression.toFixed(1)}`);
         return `#${s.number}(${parts.join('+')})`;
       }).join(', '));
     }

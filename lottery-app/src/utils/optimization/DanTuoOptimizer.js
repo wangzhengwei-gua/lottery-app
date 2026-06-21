@@ -1,6 +1,6 @@
 /**
  * 胆拖优化器（P1+P2+P3重构版）
- * P1: 维度从15→5精简（删除噪音/重叠维度）
+ * P1: 维度5→6（新增和值回归维度，与现有维度不重叠）
  * P2: 删除降级方法optimizeTuoSelection死代码
  * P3: 拖码定位改为覆盖最大化而非个体评分最大化
  */
@@ -35,8 +35,8 @@ export class DanTuoOptimizer {
 
   /**
    * 融合区间频率的拖码选择优化（P1+P3+黄金/斐波那契增强版）
-   * P1: 5维度评分（热号: heatSignal+zone5Trend+correlation+repeatFactor+momentum）
-   *      均衡/保守: freqMomentum+conditionalProb+omissionDeviation(+黄金回归+斐波那契节奏)+zone5Trend+correlation）
+   * P1: 6维度评分（热号: heatSignal+zone5Trend+correlation+repeatFactor+momentum+sumRegression）
+   *      均衡/保守: freqMomentum+conditionalProb+omissionDeviation(+黄金回归+斐波那契节奏)+zone5Trend+correlation+sumRegression）
    * P3: 拖码定位改为覆盖最大化 - 优先选未覆盖区的号码而非纯评分排序
    * @param {number[]} danNumbers - 胆码数组
    * @param {number[]} candidateNumbers - 候选拖码数组
@@ -45,7 +45,7 @@ export class DanTuoOptimizer {
    * @returns {number[]} 优化后的拖码数组
    */
   optimizeTuoSelectionWithZoneFrequency(danNumbers, candidateNumbers, targetCount = 10, strategy = 'balanced') {
-    console.log('  拖码选择优化（P1 5维度 + P3 覆盖最大化 + 黄金/斐波那契增强）');
+    console.log('  拖码选择优化（P1 6维度 + P3 覆盖最大化 + 黄金/斐波那契增强 + 和值回归）');
 
     if (!danNumbers || !Array.isArray(danNumbers) || danNumbers.length === 0) {
       console.warn('⚠️ 胆码为空，降级到普通选择');
@@ -55,9 +55,9 @@ export class DanTuoOptimizer {
 
     // P1维度精简：5维度配置
     const defaultMultipliers = {
-      hot: { heatSignal: 1, zone5Trend: 1, correlation: 1.5, repeatFactor: 1, momentum: 1 },
-      balanced: { freqMomentum: 1, conditionalProb: 1, omissionDeviation: 1, zone5Trend: 1, correlation: 1.5 },
-      conservative: { freqMomentum: 0.8, conditionalProb: 0.8, omissionDeviation: 1, zone5Trend: 1, correlation: 1.5 }
+      hot: { heatSignal: 1, zone5Trend: 1, correlation: 1.5, repeatFactor: 1, momentum: 1, sumRegression: 1 },
+      balanced: { freqMomentum: 1, conditionalProb: 1, omissionDeviation: 1, zone5Trend: 1, correlation: 1.5, sumRegression: 1 },
+      conservative: { freqMomentum: 0.8, conditionalProb: 0.8, omissionDeviation: 1, zone5Trend: 1, correlation: 1.5, sumRegression: 0.8 }
     };
     const dm = defaultMultipliers[strategy];
 
@@ -134,6 +134,21 @@ export class DanTuoOptimizer {
     // 5小区动态趋势数据
     const { zone5Prediction, zone5Absence, zone5Trend } = computeZone5Prediction(activeData, getZone5);
 
+    // 和值趋势数据（维度6: 和值回归信号）
+    // 核心逻辑：近期和值偏高→偏低号码加分（回归低值），近期和值偏低→偏高号码加分
+    // 拖码需补偿胆码和值偏差：胆码偏高→偏低拖码加分
+    const sumTrendData = this.trendAnalyzer.analyzeSumTrend();
+    const avgFrontSum = sumTrendData.avgFrontSum;
+    const idealPerNum = avgFrontSum / CONFIG.FRONT_COUNT;
+    const recent5Sums = sumTrendData.recentFrontSums.slice(-5);
+    const recent5Avg = recent5Sums.length > 0 ? recent5Sums.reduce((a,b) => a+b, 0) / recent5Sums.length : avgFrontSum;
+    const sumBias = recent5Avg - avgFrontSum;
+    const danSum = danNumbers.reduce((a, b) => a + b, 0);
+    const danCount = danNumbers.length;
+    const idealDanContribution = avgFrontSum * danCount / CONFIG.FRONT_COUNT;
+    const danSumBias = danSum - idealDanContribution;
+    console.log('  📊 和值趋势: 近5期均值' + recent5Avg.toFixed(1) + '(偏差' + sumBias.toFixed(1) + '), 胆码和值' + danSum + '(偏差' + danSumBias.toFixed(1) + '), 理想单号贡献≈' + idealPerNum.toFixed(1));
+
     // 胆码区间分布（P3: 覆盖最大化需要知道胆码覆盖了哪些区）
     const danZoneCount = {};
     danNumbers.forEach(num => {
@@ -183,6 +198,22 @@ export class DanTuoOptimizer {
         if (acceleration > 0 && maxAcceleration > 0) {
           score += (acceleration / maxAcceleration) * 5 * dm.momentum;
         }
+
+        // 维度6: 和值趋势回归（近期偏高→偏低号码加分，近期偏低→偏高号码加分）
+        const sumNeedDirection = sumBias + danSumBias * 0.3;
+        const hotSumMax = 5;
+        let hotSumScore = 0;
+        if (Math.abs(sumNeedDirection) > 5) {
+          const normalizedDirection = Math.min(Math.abs(sumNeedDirection) / 20, 1);
+          if (sumNeedDirection > 0 && tuoNum < idealPerNum) {
+            const deviation = (idealPerNum - tuoNum) / idealPerNum;
+            hotSumScore = normalizedDirection * Math.min(deviation * 0.5, 0.8) * hotSumMax;
+          } else if (sumNeedDirection < 0 && tuoNum > idealPerNum) {
+            const deviation = (tuoNum - idealPerNum) / idealPerNum;
+            hotSumScore = normalizedDirection * Math.min(deviation * 0.5, 0.8) * hotSumMax;
+          }
+        }
+        score += hotSumScore * dm.sumRegression;
       } else {
         // === 均衡/保守策略5维度 ===
         // 维度1: 频率+动量
@@ -234,6 +265,23 @@ export class DanTuoOptimizer {
         const rawCorr = rawCorrelationScores.find(s => s.number === tuoNum)?.corr || 0;
         const normalizedCorr = maxCorr > 0 ? rawCorr / maxCorr : 0;
         score += normalizedCorr * 10 * dm.correlation;
+
+        // 维度6: 和值趋势回归（近期和值偏离→号码值反向加分）
+        // 拖码需补偿胆码和值偏差：胆码偏高→偏低拖码加分，胆码偏低→偏高拖码加分
+        const sumNeedDirection = sumBias + danSumBias * 0.3;
+        const balConSumMax = strategy === 'balanced' ? 8 : 6;
+        let balConSumScore = 0;
+        if (Math.abs(sumNeedDirection) > 5) {
+          const normalizedDirection = Math.min(Math.abs(sumNeedDirection) / 20, 1);
+          if (sumNeedDirection > 0 && tuoNum < idealPerNum) {
+            const deviation = (idealPerNum - tuoNum) / idealPerNum;
+            balConSumScore = normalizedDirection * Math.min(deviation * 0.5, 0.8) * balConSumMax;
+          } else if (sumNeedDirection < 0 && tuoNum > idealPerNum) {
+            const deviation = (tuoNum - idealPerNum) / idealPerNum;
+            balConSumScore = normalizedDirection * Math.min(deviation * 0.5, 0.8) * balConSumMax;
+          }
+        }
+        score += balConSumScore * dm.sumRegression;
       }
 
       // 热号策略：斐波那契号码结构加分

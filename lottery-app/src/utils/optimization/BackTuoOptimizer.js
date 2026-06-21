@@ -1,6 +1,6 @@
 /**
  * 后区拖码智能推荐优化器
- * 融合：条件概率 + 遗漏回归 + 时间衰减 + 频率 + 与胆码协同性
+ * 融合：条件概率 + 遗漏回归 + 时间衰减 + 频率 + 与胆码协同性 + 和值回归
  * 使用加权随机采样，每次推荐结果不同但合理
  */
 
@@ -24,9 +24,9 @@ export class BackTuoOptimizer {
     // 核心改进：后区12选2-4的目标是覆盖不同4小区，激活zone4Trend是覆盖导向的关键
     // 同时激活条件概率(归一化后区分度好)和频率动量(短期趋势信号)
     const defaultMultipliers = {
-      hot: { conditionalProb: 0.3, omission: 1, freqMomentum: 0.5, timeDecay: 0, hotZoneTrend: 0, repeatFactor: 0.5, zone4Trend: 1, coolingPenalty: 0, freqTrend: 0 },
-      balanced: { conditionalProb: 0.5, omission: 1, freqMomentum: 0.5, timeDecay: 0, freqTrend: 0.5, zone4Trend: 1 },
-      conservative: { conditionalProb: 0.5, omission: 1, freqMomentum: 0.5, timeDecay: 0, freqTrend: 0.5, zone4Trend: 1 }
+      hot: { conditionalProb: 0.3, omission: 1, freqMomentum: 0.5, timeDecay: 0, hotZoneTrend: 0, repeatFactor: 0.5, zone4Trend: 1, coolingPenalty: 0, freqTrend: 0, sumRegression: 1 },
+      balanced: { conditionalProb: 0.5, omission: 1, freqMomentum: 0.5, timeDecay: 0, freqTrend: 0.5, zone4Trend: 1, sumRegression: 1 },
+      conservative: { conditionalProb: 0.5, omission: 1, freqMomentum: 0.5, timeDecay: 0, freqTrend: 0.5, zone4Trend: 1, sumRegression: 0.8 }
     };
 
     const dm = dimensionMultipliers || defaultMultipliers[strategy];
@@ -83,6 +83,20 @@ export class BackTuoOptimizer {
     const zone4RangeFormatter = (z) => z <= 3 ? `${(z-1)*3+1}-${z*3}` : '10-12';
     const backZone4Log = formatZonePredictionLog(backZone4Prediction, backZone4Absence, backZone4Trend, 4, zone4RangeFormatter, '后区4小区');
     console.log('  📊 后区拖码4小区动态趋势:', backZone4Log);
+
+    // === 和值趋势数据（和值回归维度） ===
+    // 后区和值理想均值≈13，单号理想贡献≈6.5
+    // 拖码需补偿胆码和值偏差：胆码偏高→偏低拖码加分
+    const sumTrendData = analyzer.trendAnalyzer.analyzeSumTrend();
+    const avgBackSum = sumTrendData.avgBackSum;
+    const idealBackPerNum = avgBackSum / CONFIG.BACK_COUNT;
+    const recent5BackSums = sumTrendData.recentBackSums.slice(-5);
+    const recent5BackAvg = recent5BackSums.length > 0 ? recent5BackSums.reduce((a,b) => a+b, 0) / recent5BackSums.length : avgBackSum;
+    const backSumBias = recent5BackAvg - avgBackSum;
+    const backDanSum = danNumbers.reduce((a, b) => a + b, 0);
+    const idealBackDanContribution = avgBackSum * danNumbers.length / CONFIG.BACK_COUNT;
+    const backDanSumBias = backDanSum - idealBackDanContribution;
+    console.log('  📊 和值趋势: 近5期均值' + recent5BackAvg.toFixed(1) + '(偏差' + backSumBias.toFixed(1) + '), 胆码和值' + backDanSum + '(偏差' + backDanSumBias.toFixed(1) + '), 理想单号贡献≈' + idealBackPerNum.toFixed(1));
 
     // 排除胆码后的候选拖码
     const candidateNumbers = Array.from({ length: CONFIG.BACK_RANGE }, (_, i) => i + 1)
@@ -239,6 +253,23 @@ export class BackTuoOptimizer {
 
       // 斐波那契号码结构加分：后区斐波那契数{1,2,3,5,8}有统计规律
       if (FIB_BACK.includes(num)) score += 0.5;
+
+      // 维度7: 和值趋势回归（近期后区和值偏离→号码值反向加分）
+      // 拖码需补偿胆码和值偏差：胆码偏高→偏低拖码加分，胆码偏低→偏高拖码加分
+      const backSumNeedDirection = backSumBias + backDanSumBias * 0.3;
+      const backTuoSumMax = strategy === 'hot' ? 5 : strategy === 'balanced' ? 6 : 5;
+      let backTuoSumRegScore = 0;
+      if (Math.abs(backSumNeedDirection) > 3) {
+        const normalizedDirection = Math.min(Math.abs(backSumNeedDirection) / 8, 1);
+        if (backSumNeedDirection > 0 && num < idealBackPerNum) {
+          const deviation = (idealBackPerNum - num) / idealBackPerNum;
+          backTuoSumRegScore = normalizedDirection * Math.min(deviation * 0.5, 0.8) * backTuoSumMax;
+        } else if (backSumNeedDirection < 0 && num > idealBackPerNum) {
+          const deviation = (num - idealBackPerNum) / idealBackPerNum;
+          backTuoSumRegScore = normalizedDirection * Math.min(deviation * 0.5, 0.8) * backTuoSumMax;
+        }
+      }
+      score += backTuoSumRegScore * dm.sumRegression;
 
       scored.push({
         number: num,
