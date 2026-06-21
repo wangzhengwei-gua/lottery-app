@@ -4,7 +4,8 @@
  */
 
 import { CONFIG } from '../core/Config.js';
-import { computeZone4Prediction, formatZonePredictionLog } from './ZonePrediction.js';
+import { computeZone4Prediction, formatZonePredictionLog, getBackZone4 } from './ZonePrediction.js';
+import { goldenRegressionBonus, fibonacciRhythmBonus, FIB_BACK, moderateOmissionRecovery, recentAppearanceBonus } from './GoldenFibonacci.js';
 
 export class BackDanOptimizer {
   /**
@@ -73,7 +74,7 @@ export class BackDanOptimizer {
     // 4小区: 区1(1-3), 区2(4-6), 区3(7-9), 区4(10-12)
     // 数据支撑: 85.4%恰好2个4小区出号, 连续不出1期后96-100%回归
     const { backZone4Absence, backZone4RecentHit, backZone4Trend, backZone4Prediction } = computeZone4Prediction(activeData);
-    const getBackZone4 = (num) => Math.ceil(num / 3); // 评分循环中仍需使用
+    // 评分循环中使用共享getBackZone4（P5优化）
     
     const zone4RangeFormatter = (z) => z <= 3 ? `${(z-1)*3+1}-${z*3}` : '10-12';
     const backZone4Log = formatZonePredictionLog(backZone4Prediction, backZone4Absence, backZone4Trend, 4, zone4RangeFormatter, '后区4小区');
@@ -132,11 +133,14 @@ export class BackDanOptimizer {
           if (omissionDeviation > omissionStd * 2) {
             strategyBonus += 3; // >2σ额外+3分
           }
-          // 频率惩罚：低频号码的遗漏回归得分打折
+          // 回测O3修复：极端冷号频率惩罚反转
+          // 根因：后区#6(遗漏20,3.33×avg)排最后 - 低频+高遗漏被惩罚，但这类号恰恰是回归候选
+          // 当遗漏>2σ时，不施加频率惩罚（回归信号比频率更重要）
+          // 当遗漏<=2σ时，保留原频率惩罚（适度遗漏+低频可能只是冷号而非回归号）
           const totalBackFreq = Object.values(backCounter).reduce((sum, f) => sum + f, 0);
           const globalFreqRatio = totalBackFreq > 0 ? freq / totalBackFreq : 0;
           const avgFreqRatio = 1 / CONFIG.BACK_RANGE;
-          if (globalFreqRatio < avgFreqRatio) {
+          if (globalFreqRatio < avgFreqRatio && omissionDeviation <= omissionStd * 2) {
             strategyBonus *= globalFreqRatio / avgFreqRatio;
           }
           omissionDevRaw += strategyBonus;
@@ -150,16 +154,28 @@ export class BackDanOptimizer {
           if (omissionDeviation > omissionStd * 2) {
             strategyBonus += 2; // >2σ额外+2分
           }
-          // 频率惩罚
+          // 回测O3修复：极端冷号频率惩罚反转（同上逻辑）
           const totalBackFreq = Object.values(backCounter).reduce((sum, f) => sum + f, 0);
           const globalFreqRatio = totalBackFreq > 0 ? freq / totalBackFreq : 0;
           const avgFreqRatio = 1 / CONFIG.BACK_RANGE;
-          if (globalFreqRatio < avgFreqRatio) {
+          if (globalFreqRatio < avgFreqRatio && omissionDeviation <= omissionStd * 2) {
             strategyBonus *= globalFreqRatio / avgFreqRatio;
           }
           omissionDevRaw += strategyBonus;
         }
       }
+      // 黄金回归子信号：后区遗漏≈0.618×avg或≈1.618×avg时回归概率显著提升
+      const goldenBonus = goldenRegressionBonus(currentOmission, avgBackOmission, omissionStd);
+      omissionDevRaw += goldenBonus;
+      // 斐波那契节奏子信号：后区遗漏=斐波那契数{1,2,3,5,8}时处于自然节奏回归点
+      const fibRhythm = fibonacciRhythmBonus(currentOmission);
+      omissionDevRaw += fibRhythm;
+      // 回测O3新增：中间地带回升 - 遗漏比率0.7-1.3的号码得分极低
+      const moderateBonus = moderateOmissionRecovery(currentOmission, avgBackOmission);
+      omissionDevRaw += moderateBonus;
+      // 回测O3新增：低遗漏近期加分 - 近期频繁出现号码也需加分
+      const recentBonus = recentAppearanceBonus(currentOmission, avgBackOmission);
+      omissionDevRaw += recentBonus;
       score += omissionDevRaw * dm.omissionDeviation;
             
       // 维度3: 频率+动量得分（dm.freqMomentum乘数控制）
@@ -222,6 +238,9 @@ export class BackDanOptimizer {
         const penalty = Math.min(coolingDegree * freqHeat * 2, maxPenalty);
         score -= penalty * (dm.coolingPenalty || 0);
       }
+
+      // 斐波那契号码结构加分：后区斐波那契数{1,2,3,5,8}出现频率有统计规律
+      if (FIB_BACK.includes(num)) score += 0.5;
 
       scored.push({
         number: num,

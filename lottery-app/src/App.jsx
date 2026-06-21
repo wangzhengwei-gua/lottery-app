@@ -837,8 +837,8 @@ function App() {
         );
         console.log('✅ 方案2成功：拖码已基于区间频率优化');
       } catch (error) {
-        console.warn('️ 方案2失败，降级到普通优化:', error);
-        optimizedTuo = analyzer.optimizeTuoSelection(optimizedDan, tuoCandidates, actualTuoCount);
+        console.warn('️ 方案2失败，降级到简单排序:', error);
+        optimizedTuo = tuoCandidates.slice(0, actualTuoCount).sort((a, b) => a - b);
       }
       
       // 使用优化后的胆拖组合

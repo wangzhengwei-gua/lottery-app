@@ -5,7 +5,8 @@
  */
 
 import { CONFIG } from '../core/Config.js';
-import { computeZone4Prediction, formatZonePredictionLog } from './ZonePrediction.js';
+import { computeZone4Prediction, formatZonePredictionLog, getBackZone4 } from './ZonePrediction.js';
+import { goldenRegressionBonus, fibonacciRhythmBonus, FIB_BACK, moderateOmissionRecovery, recentAppearanceBonus } from './GoldenFibonacci.js';
 
 export class BackTuoOptimizer {
   /**
@@ -19,14 +20,13 @@ export class BackTuoOptimizer {
     console.log('🎯 后区拖码智能推荐（多维度评分 + 加权随机采样）');
     console.log('  胆码:', danNumbers, '拖码数量:', tuoCount);
 
-    // 维度权重倍率（基于后区拖码敏感性分析结果优化）
-    // 核心发现：后区拖码(4选)的目标是最大化覆盖率，评分偏向热号反而降低多样性
-    // hot策略：所有维度负贡献！评分过度集中热号→仅保留遗漏评分(最小负贡献-0.7%)
-    // balanced/保守策略：仅遗漏回归正贡献(+2.9%)，移除其他负贡献维度
+    // 维度权重倍率（P0优化：激活多维度，后区拖码≠纯遗漏排序）
+    // 核心改进：后区12选2-4的目标是覆盖不同4小区，激活zone4Trend是覆盖导向的关键
+    // 同时激活条件概率(归一化后区分度好)和频率动量(短期趋势信号)
     const defaultMultipliers = {
-      hot: { conditionalProb: 0, omission: 1, freqMomentum: 0, timeDecay: 0, hotZoneTrend: 0, repeatFactor: 0, zone4Trend: 0, coolingPenalty: 0, freqTrend: 0 },
-      balanced: { conditionalProb: 0, omission: 1, freqMomentum: 0, timeDecay: 0, freqTrend: 0, zone4Trend: 0 },
-      conservative: { conditionalProb: 0, omission: 1, freqMomentum: 0, timeDecay: 0, freqTrend: 0, zone4Trend: 0 }
+      hot: { conditionalProb: 0.3, omission: 1, freqMomentum: 0.5, timeDecay: 0, hotZoneTrend: 0, repeatFactor: 0.5, zone4Trend: 1, coolingPenalty: 0, freqTrend: 0 },
+      balanced: { conditionalProb: 0.5, omission: 1, freqMomentum: 0.5, timeDecay: 0, freqTrend: 0.5, zone4Trend: 1 },
+      conservative: { conditionalProb: 0.5, omission: 1, freqMomentum: 0.5, timeDecay: 0, freqTrend: 0.5, zone4Trend: 1 }
     };
 
     const dm = dimensionMultipliers || defaultMultipliers[strategy];
@@ -77,10 +77,8 @@ export class BackTuoOptimizer {
     }
     const hotFirstHalfRatio = hotTotalFreq > 0 ? hotFirstHalfFreq / hotTotalFreq : 0.5;
 
-    // === 后区4小区动态趋势数据（改进4：使用共享ZonePrediction工具，与BackDanOptimizer维度对称） ===
-    // 4小区: 区1(1-3), 区2(4-6), 区3(7-9), 区4(10-12)
+    // === 后区4小区动态趋势数据（P5优化：使用共享getBackZone4） ===
     const { backZone4Absence, backZone4RecentHit, backZone4Trend, backZone4Prediction } = computeZone4Prediction(activeData);
-    const getBackZone4 = (num) => Math.ceil(num / 3);
     
     const zone4RangeFormatter = (z) => z <= 3 ? `${(z-1)*3+1}-${z*3}` : '10-12';
     const backZone4Log = formatZonePredictionLog(backZone4Prediction, backZone4Absence, backZone4Trend, 4, zone4RangeFormatter, '后区4小区');
@@ -138,7 +136,7 @@ export class BackTuoOptimizer {
       const normalizedCondProb = maxCondProb > 0 ? condProb / maxCondProb : 0;
       score += normalizedCondProb * (strategy === 'hot' ? 20 : 25) * dm.conditionalProb;
 
-      // 维度2: 遗漏/趋势评分（热号20分，均衡/保守25分）- 热号策略奖励低遗漏，均衡/保守策略奖励遗漏回归
+      // 维度2: 遗漏/趋势评分（热号20分，均衡/保守25分）+ 黄金回归/斐波那契节奏
       const currentOmission = omissionData.back[num] || 0;
       const omissionDeviation = currentOmission - avgBackOmission;
       if (strategy === 'hot') {
@@ -155,7 +153,7 @@ export class BackTuoOptimizer {
           score += normalizedHotness * 20 * dm.omission;
         }
       } else {
-        // 均衡/保守策略：遗漏回归逻辑
+        // 均衡/保守策略：遗漏回归逻辑 + 黄金回归 + 斐波那契节奏增强
         if (omissionDeviation > 0) {
           const normalizedDeviation = maxPositiveDeviation > 0
             ? omissionDeviation / maxPositiveDeviation : 0;
@@ -164,6 +162,13 @@ export class BackTuoOptimizer {
             score += 5 * dm.omission;
           }
         }
+        // 黄金回归子信号：遗漏≈0.618×avg或≈1.618×avg时回归概率显著提升
+        score += goldenRegressionBonus(currentOmission, avgBackOmission, omissionStd) * dm.omission;
+        // 斐波那契节奏子信号：后区遗漏=斐波那契数{1,2,3,5,8}时处于自然节奏回归点
+        score += fibonacciRhythmBonus(currentOmission) * dm.omission;
+        // 回测O4新增：中间地带回升+低遗漏近期加分
+        score += moderateOmissionRecovery(currentOmission, avgBackOmission) * dm.omission;
+        score += recentAppearanceBonus(currentOmission, avgBackOmission) * dm.omission;
       }
 
       // 维度3: 频率得分（20分满分）- 归一化 + 近期趋势动量加成
@@ -231,6 +236,9 @@ export class BackTuoOptimizer {
           score -= penalty * dm.coolingPenalty;
         }
       }
+
+      // 斐波那契号码结构加分：后区斐波那契数{1,2,3,5,8}有统计规律
+      if (FIB_BACK.includes(num)) score += 0.5;
 
       scored.push({
         number: num,

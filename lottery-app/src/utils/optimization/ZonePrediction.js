@@ -134,6 +134,38 @@ export function computeZone4Prediction(activeData, getBackZone4 = (num) => Math.
  * @param {string} label - 日志标签
  * @returns {string} 格式化后的日志字符串
  */
+// === 区间映射函数（统一导出，消除各优化器重复定义） ===
+
+/**
+ * 前区5小区映射：区1(1-7),区2(8-14),区3(15-21),区4(22-28),区5(29-35)
+ * 85.4%只有3-4个小区出号，连续不出2期后100%回归
+ */
+export function getZone5(num) {
+  return Math.ceil(num / 7);
+}
+
+/**
+ * 前区7小区映射：区1(01-05),区2(06-10),区3(11-15),区4(16-20),区5(21-25),区6(26-30),区7(31-35)
+ * 用于区间饱和度调节等辅助维度
+ */
+export function getZone7(num) {
+  if (num <= 5) return 1;
+  if (num <= 10) return 2;
+  if (num <= 15) return 3;
+  if (num <= 20) return 4;
+  if (num <= 25) return 5;
+  if (num <= 30) return 6;
+  return 7;
+}
+
+/**
+ * 后区4小区映射：区1(1-3),区2(4-6),区3(7-9),区4(10-12)
+ * 85.4%恰好2个4小区出号，连续不出1期后96-100%回归
+ */
+export function getBackZone4(num) {
+  return Math.ceil(num / 3);
+}
+
 export function formatZonePredictionLog(prediction, absence, trend, zoneCount, zoneRangeFormatter, label) {
   const order = { must: 0, very_likely: 1, likely_warm: 2, warming: 3, normal: 4, unlikely_cool: 5 };
   return Object.entries(prediction)

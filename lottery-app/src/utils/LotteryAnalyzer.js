@@ -17,9 +17,7 @@ import { DanTuoOptimizer } from './optimization/DanTuoOptimizer.js';
 import { BackDanOptimizer } from './optimization/BackDanOptimizer.js';
 import { FrontDanOptimizer } from './optimization/FrontDanOptimizer.js';
 import { BackTuoOptimizer } from './optimization/BackTuoOptimizer.js';
-import { BayesianDanTuoModel } from './optimization/BayesianDanTuoModel.js';
-import { NormalDanTuoModel } from './optimization/NormalDanTuoModel.js';
-import { ZhouyiDanTuoModel } from './optimization/ZhouyiDanTuoModel.js';
+import { AuxiliaryDanTuoModel } from './optimization/AuxiliaryDanTuoModel.js';
 
 // 导入所有算法模型
 import { BayesianDynamicModel } from './algorithms/BayesianDynamic.js';
@@ -496,121 +494,6 @@ class LotteryAnalyzer {
       throw new Error('模型未初始化，请先调用 loadHistoryData()');
     }
     return this.models.timeDecay.calculateTimeDecayWeights();
-  }
-
-  /**
-   * 优化后区胆码推荐（多维度智能评分）
-   * 融合：条件概率 + 遗漏回归 + 时间衰减 + 频率 + 区间分布
-   * @param {number} backDanCount - 需要推荐的胆码数量
-   * @returns {number[]} 推荐的后区胆码
-   */
-  optimizeBackDanRecommendation(backDanCount = 1) {
-    console.log('🎯 后区胆码智能推荐（多维度评分）');
-    
-    // 1. 获取条件概率
-    const conditionalProb = this.conditionalProbability.calculateConditionalProbability();
-    const confidence = conditionalProb.confidence || 0.3;
-    
-    // 2. 获取遗漏数据
-    const omissionData = this.omissionCalculator.calculateOmission();
-    const avgBackOmission = this.omissionCalculator.getAverageOmission('back');
-    const omissionStd = this.omissionCalculator.getOmissionStd('back');
-    
-    // 3. 获取频率数据
-    const [, backCounter] = this.frequencyAnalyzer.analyzeFrequency();
-    const maxFreq = Math.max(...Object.values(backCounter));
-    
-    // 4. 获取时间衰减权重
-    const timeWeights = this.calculateTimeDecayWeights();
-    
-    // 5. 计算每个号码的综合得分
-    const scored = [];
-    for (let num = 1; num <= CONFIG.BACK_RANGE; num++) {
-      let score = 0;
-      
-      // 维度1: 条件概率得分（25%）
-      const condProb = conditionalProb.back[num] || 0;
-      score += condProb * CONFIG.BACK_CONDITIONAL_WEIGHT * confidence * 10;
-      
-      // 维度2: 遗漏回归加成（25%）
-      const currentOmission = omissionData.back[num] || 0;
-      const omissionDeviation = currentOmission - avgBackOmission;
-      if (omissionDeviation > 0) {
-        score += Math.min(omissionDeviation * 0.5, 20);
-        if (omissionDeviation > omissionStd * 2) {
-          score += 10; // 超过2倍标准差额外加分
-        }
-      }
-      
-      // 维度3: 频率得分（20%）
-      const freq = backCounter[String(num)] || backCounter[num] || 0;
-      score += (freq / maxFreq) * 20;
-      
-      // 维度4: 时间衰减得分（15%）
-      const timeWeight = timeWeights.back[num] || 0;
-      score += timeWeight * 15;
-      
-      // 维度5: 区间分布均衡（15%）
-      const isInFirstHalf = num <= 6 ? 1 : 0; // 后一区 vs 后二区
-      const expectedBalance = 0.5; // 理想情况下两区均衡
-      score += Math.abs(isInFirstHalf - expectedBalance) * 15;
-      
-      scored.push({
-        number: num,
-        score,
-        condProb,
-        omission: currentOmission,
-        freq,
-        timeWeight
-      });
-    }
-    
-    // 按得分降序排序
-    scored.sort((a, b) => b.score - a.score);
-    
-    // 选择前 backDanCount 个号码，但确保区间分布均衡
-    const selected = [];
-    const selectedNumbers = new Set();
-    
-    for (const item of scored) {
-      if (selected.length >= backDanCount) break;
-      
-      const num = item.number;
-      
-      // 检查是否已在选中
-      if (selectedNumbers.has(num)) continue;
-      
-      // 区间分布检查：如果已经选了2个以上胆码，确保两区都有覆盖
-      if (selected.length >= 2) {
-        const firstHalfCount = selected.filter(n => n <= 6).length;
-        const secondHalfCount = selected.length - firstHalfCount;
-        
-        // 如果某一区已有2个，优先选择另一区
-        if (num <= 6 && firstHalfCount >= 2) continue;
-        if (num > 6 && secondHalfCount >= 2) continue;
-      }
-      
-      selected.push(num);
-      selectedNumbers.add(num);
-    }
-    
-    // 如果数量不足（区间限制导致），放宽限制
-    if (selected.length < backDanCount) {
-      for (const item of scored) {
-        if (selected.length >= backDanCount) break;
-        if (!selectedNumbers.has(item.number)) {
-          selected.push(item.number);
-          selectedNumbers.add(item.number);
-        }
-      }
-    }
-    
-    console.log('✅ 后区胆码推荐完成:', selected.sort((a, b) => a - b));
-    console.log('  推荐详情:', scored.slice(0, backDanCount).map(item => 
-      `#${item.number}(条件概率${item.condProb.toFixed(3)}, 遗漏${item.omission}, 频率${item.freq}, 时间权重${item.timeWeight.toFixed(3)}, 总分${item.score.toFixed(2)})`
-    ).join(', '));
-    
-    return selected.sort((a, b) => a - b);
   }
 
   /**
@@ -1171,21 +1054,11 @@ class LotteryAnalyzer {
   }
 
   /**
-   * 优化拖码选择（基础版）
-   */
-  optimizeTuoSelection(danNumbers, candidateNumbers, targetCount = 10) {
-    if (!this.danTuoOptimizer) {
-      throw new Error('胆拖优化器未初始化，请先调用 loadHistoryData()');
-    }
-        return this.danTuoOptimizer.optimizeTuoSelection(danNumbers, candidateNumbers, targetCount);
-  }
-
-  /**
-   * 生成3个辅助模型的胆拖推荐结果
+   * 生成3个辅助模型的胆拖推荐结果（P4合并：统一AuxiliaryDanTuoModel，mode参数切换）
    * @param {number} danCount - 胆码数量
    * @param {number} tuoCount - 拖码数量
    * @param {string} strategy - 策略: hot/balanced/conservative
-   * @returns {Object} { bayesian, normal, zhouyi } 每个模型的推荐结果
+   * @returns {Object} { bayesian, normal, zhouyi, goldenFibonacci } 每个模式的推荐结果
    */
   generateModelRecommendations(danCount = 3, tuoCount = 10, strategy = 'hot') {
     if (!this.frequencyAnalyzer) {
@@ -1195,33 +1068,43 @@ class LotteryAnalyzer {
     const results = {};
 
     try {
-      results.bayesian = BayesianDanTuoModel.recommendFront(this, danCount, strategy);
-      const bayesianBack = BayesianDanTuoModel.recommendBack(this, 1);
+      results.bayesian = AuxiliaryDanTuoModel.recommendFront(this, danCount, strategy, 'bayesian');
+      const bayesianBack = AuxiliaryDanTuoModel.recommendBack(this, 1, 'bayesian');
       results.bayesian.back = bayesianBack.danSelected && bayesianBack.danSelected.length > 0 ? bayesianBack : null;
-      results.bayesian.modelInfo = BayesianDanTuoModel.getDescription();
+      results.bayesian.modelInfo = AuxiliaryDanTuoModel.getDescription('bayesian');
     } catch (e) {
       console.warn('⚠️ 贝叶斯动态胆拖推荐失败:', e);
       results.bayesian = null;
     }
 
     try {
-      results.normal = NormalDanTuoModel.recommendFront(this, danCount, strategy);
-      const normalBack = NormalDanTuoModel.recommendBack(this, 1);
+      results.normal = AuxiliaryDanTuoModel.recommendFront(this, danCount, strategy, 'normal');
+      const normalBack = AuxiliaryDanTuoModel.recommendBack(this, 1, 'normal');
       results.normal.back = normalBack.danSelected && normalBack.danSelected.length > 0 ? normalBack : null;
-      results.normal.modelInfo = NormalDanTuoModel.getDescription();
+      results.normal.modelInfo = AuxiliaryDanTuoModel.getDescription('normal');
     } catch (e) {
       console.warn('⚠️ 正态分布胆拖推荐失败:', e);
       results.normal = null;
     }
 
     try {
-      results.zhouyi = ZhouyiDanTuoModel.recommendFront(this, danCount, strategy);
-      const zhouyiBack = ZhouyiDanTuoModel.recommendBack(this, 1);
+      results.zhouyi = AuxiliaryDanTuoModel.recommendFront(this, danCount, strategy, 'zhouyi');
+      const zhouyiBack = AuxiliaryDanTuoModel.recommendBack(this, 1, 'zhouyi');
       results.zhouyi.back = zhouyiBack.danSelected && zhouyiBack.danSelected.length > 0 ? zhouyiBack : null;
-      results.zhouyi.modelInfo = ZhouyiDanTuoModel.getDescription();
+      results.zhouyi.modelInfo = AuxiliaryDanTuoModel.getDescription('zhouyi');
     } catch (e) {
       console.warn('⚠️ 周易时空胆拖推荐失败:', e);
       results.zhouyi = null;
+    }
+
+    try {
+      results.goldenFibonacci = AuxiliaryDanTuoModel.recommendFront(this, danCount, strategy, 'goldenFibonacci');
+      const goldenBack = AuxiliaryDanTuoModel.recommendBack(this, 1, 'goldenFibonacci');
+      results.goldenFibonacci.back = goldenBack.danSelected && goldenBack.danSelected.length > 0 ? goldenBack : null;
+      results.goldenFibonacci.modelInfo = AuxiliaryDanTuoModel.getDescription('goldenFibonacci');
+    } catch (e) {
+      console.warn('⚠️ 黄金斐波那契胆拖推荐失败:', e);
+      results.goldenFibonacci = null;
     }
 
     return results;
