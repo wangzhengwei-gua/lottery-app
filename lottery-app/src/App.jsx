@@ -13,6 +13,7 @@ import DataVisualization from './components/DataVisualization';
 import ShuangSeQiuPage from './components/ShuangSeQiuPage';
 import ZoneAnalysisPanel from './components/ZoneAnalysisPanel';
 import LotteryBlackboard from './components/LotteryBlackboard';
+import CompoundCalculator from './components/CompoundCalculator';
 import './components/LotteryBlackboard.css';
 import './App.css';
 
@@ -2268,6 +2269,9 @@ function App() {
             </div>
           )}
         </section>
+
+        {/* 复式价格计算器 */}
+        <CompoundCalculator />
 
         {/* 复式玩法 */}
         <section className="card fushi-section">

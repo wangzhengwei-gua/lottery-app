@@ -1,0 +1,586 @@
+/* ======================== 复式价格计算器 ======================== */
+.compound-calculator-section {
+  position: relative;
+}
+
+.compound-calc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.compound-calc-header h2 {
+  margin: 0;
+}
+
+.compound-clear-btn {
+  padding: 6px 14px;
+  font-size: 0.85em;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #f8f9fa;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.compound-clear-btn:hover {
+  background: #fff0f0;
+  color: #e74c3c;
+  border-color: #e74c3c;
+}
+
+/* 彩种切换标签 */
+.lottery-type-tabs {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0 8px 0;
+}
+
+.lottery-tab {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 1em;
+  font-weight: 600;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: #f8f9fa;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.lottery-tab:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.lottery-tab.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.compound-calc-hint {
+  font-size: 0.85em;
+  color: #888;
+  margin-bottom: 15px;
+  padding: 8px 12px;
+  background: #f0f4ff;
+  border-radius: 6px;
+  border-left: 3px solid #667eea;
+}
+
+/* 号码选择区域 */
+.compound-zone {
+  margin-bottom: 20px;
+}
+
+.compound-zone-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.zone-name {
+  font-weight: 700;
+  font-size: 1.05em;
+}
+
+.zone-count {
+  font-size: 0.88em;
+  color: #666;
+}
+
+.zone-warn {
+  color: #e67e22;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.select-all-btn {
+  margin-left: auto;
+  padding: 3px 12px;
+  font-size: 0.8em;
+  border: 1px solid #3498db;
+  border-radius: 4px;
+  background: transparent;
+  color: #3498db;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.select-all-btn:hover {
+  background: #3498db;
+  color: white;
+}
+
+/* 号球网格 */
+.compound-ball-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.compound-ball-grid.back-grid {
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+}
+
+.calc-ball {
+  width: 100%;
+  aspect-ratio: 1;
+  min-width: 38px;
+  border: 2px solid #e0e0e0;
+  border-radius: 50%;
+  background: #fafafa;
+  color: #666;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calc-ball:hover {
+  border-color: #667eea;
+  transform: scale(1.08);
+}
+
+.calc-ball.selected.front {
+  background: radial-gradient(circle at 30% 30%, #ff7676, #e74c3c);
+  border-color: #c0392b;
+  color: white;
+  box-shadow: 0 2px 6px rgba(231, 76, 60, 0.4);
+}
+
+.calc-ball.selected.back {
+  background: radial-gradient(circle at 30% 30%, #5dade2, #3498db);
+  border-color: #2980b9;
+  color: white;
+  box-shadow: 0 2px 6px rgba(52, 152, 219, 0.4);
+}
+
+/* 倍投设置 */
+.multiplier-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.multiplier-label {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95em;
+}
+
+.multiplier-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: white;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #667eea;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.multiplier-btn:hover:not(:disabled) {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.multiplier-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.multiplier-input {
+  width: 60px;
+  height: 32px;
+  text-align: center;
+  border: 2px solid #667eea;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: bold;
+  color: #667eea;
+  outline: none;
+}
+
+.multiplier-input::-webkit-inner-spin-button,
+.multiplier-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.multiplier-quick {
+  display: flex;
+  gap: 5px;
+  margin-left: 8px;
+}
+
+.quick-mult-btn {
+  padding: 4px 10px;
+  font-size: 0.82em;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.quick-mult-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.quick-mult-btn.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+/* 计算结果 */
+.compound-result {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+  border-radius: 10px;
+  padding: 18px;
+  min-height: 80px;
+  border: 1px solid #e0e6ed;
+}
+
+.result-formula {
+  font-size: 0.88em;
+  color: #555;
+  margin-bottom: 12px;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+  line-height: 1.6;
+}
+
+.result-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.result-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.result-item.total {
+  margin-left: 4px;
+}
+
+.result-label {
+  font-size: 0.72em;
+  color: #888;
+}
+
+.result-value {
+  font-size: 1.3em;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.result-value.total-amount {
+  font-size: 1.7em;
+  color: #e74c3c;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.result-unit {
+  font-size: 0.78em;
+  color: #aaa;
+}
+
+.result-divider {
+  font-size: 1.2em;
+  color: #bbb;
+  font-weight: 300;
+  align-self: center;
+  margin: 0 2px;
+}
+
+.result-tag {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 3px 12px;
+  font-size: 0.8em;
+  background: #fff3cd;
+  color: #856404;
+  border-radius: 12px;
+  border: 1px solid #ffeaa7;
+}
+
+.result-tag.single {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-color: #a5d6a7;
+}
+
+.result-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: #aaa;
+  padding: 16px 0;
+}
+
+.placeholder-icon {
+  font-size: 2em;
+}
+
+.placeholder-hint {
+  font-size: 0.82em;
+  color: #e67e22;
+}
+
+/* ======================== 中奖收益分析 ======================== */
+.prize-analysis {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 2px dashed #ddd;
+}
+
+.prize-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.prize-title {
+  font-weight: 700;
+  font-size: 1em;
+  color: #2c3e50;
+}
+
+.toggle-prize-btn {
+  padding: 4px 12px;
+  font-size: 0.82em;
+  border: 1px solid #667eea;
+  border-radius: 4px;
+  background: transparent;
+  color: #667eea;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-prize-btn:hover {
+  background: #667eea;
+  color: white;
+}
+
+.prize-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 8px;
+  border: 1px solid #bae6fd;
+  flex-wrap: wrap;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.summary-label {
+  font-size: 0.72em;
+  color: #666;
+}
+
+.summary-value {
+  font-size: 1.2em;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.summary-value.win {
+  color: #27ae60;
+}
+
+.summary-value.cost {
+  color: #e74c3c;
+}
+
+.summary-item.net.profit .summary-value {
+  color: #27ae60;
+}
+
+.summary-item.net.loss .summary-value {
+  color: #e74c3c;
+}
+
+.summary-item.roi.positive .summary-value {
+  color: #27ae60;
+}
+
+.summary-item.roi.negative .summary-value {
+  color: #e74c3c;
+}
+
+.summary-divider {
+  font-size: 1.1em;
+  color: #bbb;
+  font-weight: 300;
+  align-self: center;
+  margin: 0 2px;
+}
+
+.prize-details {
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.prize-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85em;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.prize-table thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.prize-table th {
+  padding: 10px 8px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.prize-table tbody tr {
+  border-bottom: 1px solid #eee;
+  transition: background 0.15s;
+}
+
+.prize-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.prize-table td {
+  padding: 8px;
+  text-align: center;
+  color: #555;
+}
+
+.prize-name {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.prize-match {
+  font-size: 0.9em;
+  color: #888;
+}
+
+.prize-bets,
+.prize-amount,
+.prize-total {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+}
+
+.prize-roi.positive {
+  color: #27ae60;
+  font-weight: 700;
+}
+
+.prize-roi.negative {
+  color: #e74c3c;
+  font-weight: 700;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .compound-ball-grid {
+    grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+    gap: 4px;
+  }
+
+  .compound-ball-grid.back-grid {
+    grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+  }
+
+  .calc-ball {
+    font-size: 0.8em;
+    min-width: 34px;
+  }
+
+  .result-summary {
+    gap: 4px;
+  }
+
+  .result-value {
+    font-size: 1.1em;
+  }
+
+  .result-value.total-amount {
+    font-size: 1.4em;
+  }
+
+  .multiplier-quick {
+    margin-left: 0;
+    margin-top: 4px;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  /* 中奖收益分析移动端适配 */
+  .prize-summary {
+    gap: 4px;
+    padding: 8px;
+  }
+
+  .summary-value {
+    font-size: 1em;
+  }
+
+  .summary-divider {
+    display: none;
+  }
+
+  .prize-table {
+    font-size: 0.75em;
+  }
+
+  .prize-table th,
+  .prize-table td {
+    padding: 6px 4px;
+  }
+}
