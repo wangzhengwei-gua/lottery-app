@@ -6,7 +6,6 @@
 
 import { CONFIG } from '../core/Config.js';
 import { computeZone4Prediction, formatZonePredictionLog, getBackZone4 } from './ZonePrediction.js';
-import { goldenRegressionBonus, fibonacciRhythmBonus, FIB_BACK, moderateOmissionRecovery, recentAppearanceBonus } from './GoldenFibonacci.js';
 
 export class BackTuoOptimizer {
   /**
@@ -150,7 +149,7 @@ export class BackTuoOptimizer {
       const normalizedCondProb = maxCondProb > 0 ? condProb / maxCondProb : 0;
       score += normalizedCondProb * (strategy === 'hot' ? 20 : 25) * dm.conditionalProb;
 
-      // 维度2: 遗漏/趋势评分（热号20分，均衡/保守25分）+ 黄金回归/斐波那契节奏
+      // 维度2: 遗漏/趋势评分（热号20分，均衡/保守25分）
       const currentOmission = omissionData.back[num] || 0;
       const omissionDeviation = currentOmission - avgBackOmission;
       if (strategy === 'hot') {
@@ -167,7 +166,7 @@ export class BackTuoOptimizer {
           score += normalizedHotness * 20 * dm.omission;
         }
       } else {
-        // 均衡/保守策略：遗漏回归逻辑 + 黄金回归 + 斐波那契节奏增强
+        // 均衡/保守策略：遗漏回归逻辑 + 中间地带回升 + 低遗漏加分
         if (omissionDeviation > 0) {
           const normalizedDeviation = maxPositiveDeviation > 0
             ? omissionDeviation / maxPositiveDeviation : 0;
@@ -176,13 +175,16 @@ export class BackTuoOptimizer {
             score += 5 * dm.omission;
           }
         }
-        // 黄金回归子信号：遗漏≈0.618×avg或≈1.618×avg时回归概率显著提升
-        score += goldenRegressionBonus(currentOmission, avgBackOmission, omissionStd) * dm.omission;
-        // 斐波那契节奏子信号：后区遗漏=斐波那契数{1,2,3,5,8}时处于自然节奏回归点
-        score += fibonacciRhythmBonus(currentOmission) * dm.omission;
-        // 回测O4新增：中间地带回升+低遗漏近期加分
-        score += moderateOmissionRecovery(currentOmission, avgBackOmission) * dm.omission;
-        score += recentAppearanceBonus(currentOmission, avgBackOmission) * dm.omission;
+        // 中间地带回升 + 低遗漏近期加分
+        if (avgBackOmission > 0) {
+          const ratio = currentOmission / avgBackOmission;
+          if (ratio >= 0.7 && ratio <= 1.3) {
+            const closeness = 1 - Math.abs(ratio - 1.0) / 0.3;
+            score += closeness * 4 * dm.omission;
+          }
+          if (ratio <= 0.5) score += 3 * dm.omission;
+          else if (ratio <= 0.7) score += 2 * dm.omission;
+        }
       }
 
       // 维度3: 频率得分（20分满分）- 归一化 + 近期趋势动量加成
@@ -250,9 +252,6 @@ export class BackTuoOptimizer {
           score -= penalty * dm.coolingPenalty;
         }
       }
-
-      // 斐波那契号码结构加分：后区斐波那契数{1,2,3,5,8}有统计规律
-      if (FIB_BACK.includes(num)) score += 0.5;
 
       // 维度7: 和值趋势回归（近期后区和值偏离→号码值反向加分）
       // 拖码需补偿胆码和值偏差：胆码偏高→偏低拖码加分，胆码偏低→偏高拖码加分

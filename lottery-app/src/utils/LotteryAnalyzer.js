@@ -13,23 +13,16 @@ import { OmissionCalculator } from './analysis/OmissionCalculator.js';
 import { TrendAnalyzer } from './analysis/TrendAnalyzer.js';
 import { CorrelationAnalyzer } from './analysis/CorrelationAnalyzer.js';
 import { ConditionalProbability } from './analysis/ConditionalProbability.js';
-import { DanTuoOptimizer } from './optimization/DanTuoOptimizer.js';
+import { UnifiedScorer } from './optimization/UnifiedScorer.js';
 import { BackDanOptimizer } from './optimization/BackDanOptimizer.js';
 import { FrontDanOptimizer } from './optimization/FrontDanOptimizer.js';
 import { BackTuoOptimizer } from './optimization/BackTuoOptimizer.js';
-import { AuxiliaryDanTuoModel } from './optimization/AuxiliaryDanTuoModel.js';
 
-// 导入所有算法模型
+// 导入算法模型（精简版：11→5，移除周易/混合/旋转/平衡/时间衰减/均值回归）
 import { BayesianDynamicModel } from './algorithms/BayesianDynamic.js';
-import { RotationMatrixModel } from './algorithms/RotationMatrix.js';
-import { ZhouyiSpaceTimeModel } from './algorithms/ZhouyiSpaceTime.js';
-import { HybridModel } from './algorithms/HybridModel.js';
 import { ZoneFrequencyModel } from './algorithms/ZoneFrequency.js';
 import { FrequencyWeightedModel } from './algorithms/FrequencyWeighted.js';
 import { OmissionAnalysisModel } from './algorithms/OmissionAnalysis.js';
-import { TimeDecayModel } from './algorithms/TimeDecay.js';
-import { MeanRegressionModel } from './algorithms/MeanRegression.js';
-import { BalancedStrategyModel } from './algorithms/BalancedStrategy.js';
 import { NormalDistributionModel } from './algorithms/NormalDistribution.js';
 import { NumberEliminator } from './optimization/NumberEliminator.js';
 import { StructuralEliminator } from './optimization/StructuralEliminator.js';
@@ -66,9 +59,6 @@ class LotteryAnalyzer {
     this.correlationAnalyzer = null;
     this.conditionalProbability = null;
     
-    // 初始化胆拖优化器
-    this.danTuoOptimizer = null;
-    
     // 初始化算法模型
     this.models = {};
   }
@@ -87,18 +77,6 @@ class LotteryAnalyzer {
     this.correlationAnalyzer = new CorrelationAnalyzer(null, getActiveData, this.frontNumbers, this.backNumbers);
     this.conditionalProbability = new ConditionalProbability(null, getActiveData, this.frontNumbers, this.backNumbers);
     
-    // 初始化胆拖优化器
-    this.danTuoOptimizer = new DanTuoOptimizer({
-      frequencyAnalyzer: this.frequencyAnalyzer,
-      omissionCalculator: this.omissionCalculator,
-      trendAnalyzer: this.trendAnalyzer,
-      correlationAnalyzer: this.correlationAnalyzer,
-      conditionalProbability: this.conditionalProbability,
-      getActiveData,
-      frontNumbers: this.frontNumbers,
-      backNumbers: this.backNumbers
-    });
-    
     // 初始化算法模型
     const modelDeps = {
       frequencyAnalyzer: this.frequencyAnalyzer,
@@ -113,15 +91,9 @@ class LotteryAnalyzer {
     
     this.models = {
       bayesian: new BayesianDynamicModel(modelDeps),
-      rotation: new RotationMatrixModel(modelDeps),
-      zhouyi: new ZhouyiSpaceTimeModel(modelDeps),
-      hybrid: new HybridModel(modelDeps),
       zoneFrequency: new ZoneFrequencyModel(modelDeps),
       frequencyWeighted: new FrequencyWeightedModel(modelDeps),
       omissionAnalysis: new OmissionAnalysisModel(modelDeps),
-      timeDecay: new TimeDecayModel(modelDeps),
-      meanRegression: new MeanRegressionModel(modelDeps),
-      balancedStrategy: new BalancedStrategyModel(modelDeps),
       normalDistribution: new NormalDistributionModel(modelDeps)
     };
   }
@@ -407,45 +379,6 @@ class LotteryAnalyzer {
   }
 
   /**
-   * 旋转矩阵预测
-   */
-  generateRotationMatrixPrediction(groups = 1) {
-    if (!this.models.rotation) {
-      throw new Error('模型未初始化，请先调用 loadHistoryData()');
-    }
-    
-    const results = [];
-    for (let i = 0; i < groups; i++) {
-      const nums = this.models.rotation.predict();
-      results.push({
-        front: nums.slice(0, CONFIG.FRONT_COUNT),
-        back: nums.slice(CONFIG.FRONT_COUNT)
-      });
-    }
-    return results;
-  }
-
-  /**
-   * 周易时空预测
-   */
-  generateZhouyiPrediction(iteration = 0) {
-    if (!this.models.zhouyi) {
-      throw new Error('模型未初始化，请先调用 loadHistoryData()');
-    }
-    return this.models.zhouyi.predict();
-  }
-
-  /**
-   * 混合模型预测
-   */
-  generateHybridPrediction() {
-    if (!this.models.hybrid) {
-      throw new Error('模型未初始化，请先调用 loadHistoryData()');
-    }
-    return this.models.hybrid.predict();
-  }
-
-  /**
    * 区间频率预测
    */
   generateZoneFrequencyPrediction(seed = null) {
@@ -456,13 +389,26 @@ class LotteryAnalyzer {
   }
 
   /**
-   * 频率加权预测
+   * 通用预测分派（精简版：5个模型）
+   * @param {string} modelKey - weighted/omission/distribution/zone_frequency/bayesian
    */
-  generateStatisticalPrediction(strategy = 'weighted') {
-    if (!this.models.frequencyWeighted) {
-      throw new Error('模型未初始化，请先调用 loadHistoryData()');
+  generateStatisticalPrediction(modelKey = 'weighted') {
+    const modelMap = {
+      weighted: 'frequencyWeighted',
+      omission: 'omissionAnalysis',
+      distribution: 'normalDistribution',
+      zone_frequency: 'zoneFrequency',
+      bayesian: 'bayesian'
+    };
+    const modelProp = modelMap[modelKey];
+    if (!modelProp || !this.models[modelProp]) {
+      // 降级到频率加权
+      if (!this.models.frequencyWeighted) {
+        throw new Error('模型未初始化，请先调用 loadHistoryData()');
+      }
+      return this.models.frequencyWeighted.predict();
     }
-    return this.models.frequencyWeighted.predict();
+    return this.models[modelProp].predict();
   }
 
   /**
@@ -476,24 +422,27 @@ class LotteryAnalyzer {
   }
 
   /**
-   * 时间衰减预测
-   */
-  generateTimeDecayPrediction(decayFactor = CONFIG.TIME_DECAY_FACTOR) {
-    if (!this.models.timeDecay) {
-      throw new Error('模型未初始化，请先调用 loadHistoryData()');
-    }
-    return this.models.timeDecay.predict();
-  }
-
-  /**
-   * 获取时间衰减权重（公开方法）
+   * 获取时间衰减权重（内联实现，原TimeDecayModel已移除）
+   * BackDanOptimizer/BackTuoOptimizer依赖此方法
    * @returns {Object} { front: {号码: 权重}, back: {号码: 权重} }
    */
   calculateTimeDecayWeights() {
-    if (!this.models.timeDecay) {
-      throw new Error('模型未初始化，请先调用 loadHistoryData()');
+    if (!this.frequencyAnalyzer) {
+      throw new Error('分析器未初始化，请先调用 loadHistoryData()');
     }
-    return this.models.timeDecay.calculateTimeDecayWeights();
+    const activeData = this.getActiveData();
+    const frontWeights = {};
+    const backWeights = {};
+    for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) frontWeights[i] = 0;
+    for (let i = 1; i <= CONFIG.BACK_RANGE; i++) backWeights[i] = 0;
+    const decayFactor = CONFIG.TIME_DECAY_FACTOR;
+    for (let idx = 0; idx < activeData.length; idx++) {
+      const draw = activeData[idx];
+      const timeWeight = Math.pow(decayFactor, activeData.length - 1 - idx);
+      for (const num of draw.front) frontWeights[num] += timeWeight;
+      for (const num of draw.back) backWeights[num] += timeWeight;
+    }
+    return { front: frontWeights, back: backWeights };
   }
 
   /**
@@ -1044,101 +993,41 @@ class LotteryAnalyzer {
   }
 
   /**
-   * 优化拖码选择（融合区间频率）
+   * 优化拖码选择（统一评分器）
+   * 使用UnifiedScorer的5维度归一化评分，替代旧版DanTuoOptimizer
    */
   optimizeTuoSelectionWithZoneFrequency(danNumbers, candidateNumbers, targetCount = 10, strategy = 'balanced') {
-    if (!this.danTuoOptimizer) {
-      throw new Error('胆拖优化器未初始化，请先调用 loadHistoryData()');
-    }
-    return this.danTuoOptimizer.optimizeTuoSelectionWithZoneFrequency(danNumbers, candidateNumbers, targetCount, strategy);
-  }
-
-  /**
-   * 生成3个辅助模型的胆拖推荐结果（P4合并：统一AuxiliaryDanTuoModel，mode参数切换）
-   * @param {number} danCount - 胆码数量
-   * @param {number} tuoCount - 拖码数量
-   * @param {string} strategy - 策略: hot/balanced/conservative
-   * @returns {Object} { bayesian, normal, zhouyi, goldenFibonacci } 每个模式的推荐结果
-   */
-  generateModelRecommendations(danCount = 3, tuoCount = 10, strategy = 'hot') {
     if (!this.frequencyAnalyzer) {
       throw new Error('分析器未初始化，请先调用 loadHistoryData()');
     }
-
-    const results = {};
-
-    try {
-      results.bayesian = AuxiliaryDanTuoModel.recommendFront(this, danCount, strategy, 'bayesian');
-      const bayesianBack = AuxiliaryDanTuoModel.recommendBack(this, 1, 'bayesian');
-      results.bayesian.back = bayesianBack.danSelected && bayesianBack.danSelected.length > 0 ? bayesianBack : null;
-      results.bayesian.modelInfo = AuxiliaryDanTuoModel.getDescription('bayesian');
-    } catch (e) {
-      console.warn('⚠️ 贝叶斯动态胆拖推荐失败:', e);
-      results.bayesian = null;
-    }
-
-    try {
-      results.normal = AuxiliaryDanTuoModel.recommendFront(this, danCount, strategy, 'normal');
-      const normalBack = AuxiliaryDanTuoModel.recommendBack(this, 1, 'normal');
-      results.normal.back = normalBack.danSelected && normalBack.danSelected.length > 0 ? normalBack : null;
-      results.normal.modelInfo = AuxiliaryDanTuoModel.getDescription('normal');
-    } catch (e) {
-      console.warn('⚠️ 正态分布胆拖推荐失败:', e);
-      results.normal = null;
-    }
-
-    try {
-      results.zhouyi = AuxiliaryDanTuoModel.recommendFront(this, danCount, strategy, 'zhouyi');
-      const zhouyiBack = AuxiliaryDanTuoModel.recommendBack(this, 1, 'zhouyi');
-      results.zhouyi.back = zhouyiBack.danSelected && zhouyiBack.danSelected.length > 0 ? zhouyiBack : null;
-      results.zhouyi.modelInfo = AuxiliaryDanTuoModel.getDescription('zhouyi');
-    } catch (e) {
-      console.warn('⚠️ 周易时空胆拖推荐失败:', e);
-      results.zhouyi = null;
-    }
-
-    try {
-      results.goldenFibonacci = AuxiliaryDanTuoModel.recommendFront(this, danCount, strategy, 'goldenFibonacci');
-      const goldenBack = AuxiliaryDanTuoModel.recommendBack(this, 1, 'goldenFibonacci');
-      results.goldenFibonacci.back = goldenBack.danSelected && goldenBack.danSelected.length > 0 ? goldenBack : null;
-      results.goldenFibonacci.modelInfo = AuxiliaryDanTuoModel.getDescription('goldenFibonacci');
-    } catch (e) {
-      console.warn('⚠️ 黄金斐波那契胆拖推荐失败:', e);
-      results.goldenFibonacci = null;
-    }
-
-    return results;
+    const scored = UnifiedScorer.score(this, 'front', strategy)
+      .filter(r => !danNumbers.includes(r.number));
+    return UnifiedScorer.weightedSample(scored, targetCount);
   }
 
   /**
    * 生成唯一的多组号码（通用）
+   * 精简版：仅支持5个保留模型（bayesian/weighted/omission/distribution/zone_frequency）
    */
   generateUniqueGroups(model, groups) {
-    // TODO: 需要实现批量生成逻辑
-    // 暂时使用简单实现
     const results = [];
     const usedBackKeys = new Set();
     
-    for (let i = 0; i < groups; i++) {
-      let comb;
-      switch (model) {
+    const generateComb = (modelKey) => {
+      switch (modelKey) {
         case 'bayesian':
-          comb = this.generateBayesianPrediction();
-          break;
-        case 'rotation':
-          comb = this.generateRotationMatrixPrediction(1)[0];
-          comb = [...comb.front, ...comb.back];
-          break;
-        case 'zhouyi':
-          comb = this.generateZhouyiPrediction(i);
-          break;
-        case 'hybrid':
-          comb = this.generateHybridPrediction();
-          break;
+          return this.generateBayesianPrediction();
+        case 'zone_frequency':
+          return this.generateZoneFrequencyPrediction();
+        case 'omission':
+          return this.generateOmissionBasedPrediction();
         default:
-          comb = this.generateStatisticalPrediction(model);
+          return this.generateStatisticalPrediction(modelKey);
       }
-      
+    };
+    
+    for (let i = 0; i < groups; i++) {
+      const comb = generateComb(model);
       const front = comb.slice(0, CONFIG.FRONT_COUNT);
       const back = comb.slice(CONFIG.FRONT_COUNT);
       const backKey = [...back].sort((a, b) => a - b).join(',');
@@ -1151,58 +1040,10 @@ class LotteryAnalyzer {
     
     // 如果数量不足，继续生成
     while (results.length < groups) {
-      let comb;
-      switch (model) {
-        case 'bayesian':
-          comb = this.generateBayesianPrediction();
-          break;
-        case 'rotation':
-          comb = this.generateRotationMatrixPrediction(1)[0];
-          comb = [...comb.front, ...comb.back];
-          break;
-        case 'zhouyi':
-          comb = this.generateZhouyiPrediction(results.length);
-          break;
-        case 'hybrid':
-          comb = this.generateHybridPrediction();
-          break;
-        default:
-          comb = this.generateStatisticalPrediction(model);
-      }
-      
+      const comb = generateComb(model);
       const front = comb.slice(0, CONFIG.FRONT_COUNT);
       const back = comb.slice(CONFIG.FRONT_COUNT);
       results.push({ front, back });
-    }
-    
-    return results;
-  }
-
-  /**
-   * 生成唯一的旋转矩阵多组
-   */
-  generateUniqueRotationGroups(groups) {
-    const usedBackKeys = new Set();
-    const results = [];
-    
-    // 先生成3倍数量
-    const rawResults = this.generateRotationMatrixPrediction(groups * 3);
-    
-    for (const group of rawResults) {
-      const backKey = [...group.back].sort((a, b) => a - b).join(',');
-      const backSum = group.back.reduce((a, b) => a + b, 0);
-      
-      if (!usedBackKeys.has(backKey) && backSum >= 3 && backSum <= 16) {
-        usedBackKeys.add(backKey);
-        results.push(group);
-        if (results.length >= groups) break;
-      }
-    }
-    
-    // 如果数量不足，继续生成
-    while (results.length < groups) {
-      const extra = this.generateRotationMatrixPrediction(1);
-      results.push(extra[0]);
     }
     
     return results;
@@ -1250,112 +1091,46 @@ class LotteryAnalyzer {
 
     console.log(`🔄 开始重新计算推荐结果（大样本分析，历史数据${dataVolume}期）...`);
 
-    // 生成各模型的预测结果（根据用户选择或数据量动态调整样本数）
-    let SAMPLE_COUNT;
-    
-    // 如果用户指定了样本量，使用用户的选择
+    // 生成各模型的预测结果（精简版：5个模型）
+    let sampleCount;
     if (customSampleSize) {
-      SAMPLE_COUNT = {
-        zhouyi: customSampleSize,
-        bayesian: customSampleSize,
-        rotation: customSampleSize,
-        hybrid: customSampleSize,
-        zone_frequency: customSampleSize  // 新增：区间频率分析
-      };
+      sampleCount = customSampleSize;
       console.log(`📊 使用用户指定的样本量: ${customSampleSize}组/模型`);
     } else {
-      // 否则根据数据量自动调整
-      if (dataVolume >= 200) {
-        SAMPLE_COUNT = {
-          zhouyi: 80,      // 周易：80组
-          bayesian: 80,    // 贝叶斯：80组
-          rotation: 80,    // 旋转矩阵：80组（16次×5组）
-          hybrid: 80,      // 混合模型：80组
-          zone_frequency: 80  // 新增：区间频率分析：80组
-        };
-      } else if (dataVolume >= 100) {
-        SAMPLE_COUNT = {
-          zhouyi: 60,
-          bayesian: 60,
-          rotation: 60,
-          hybrid: 60,
-          zone_frequency: 60  // 新增：区间频率分析：60组
-        };
-      } else {
-        SAMPLE_COUNT = {
-            zhouyi: 50,
-          bayesian: 50,
-          rotation: 50,
-          hybrid: 50,
-          zone_frequency: 50  // 新增：区间频率分析：50组
-        };
+      sampleCount = dataVolume >= 200 ? 80 : dataVolume >= 100 ? 60 : 50;
+      console.log(`📊 使用自动样本量: ${sampleCount}组/模型（基于${dataVolume}期数据）`);
+    }
+
+    // 统一预测生成函数
+    const generatePredictions = (modelKey, count) => {
+      const preds = [];
+      for (let i = 0; i < count; i++) {
+        const pred = this.generateUniqueGroups(modelKey, 1)[0];
+        preds.push({
+          front: pred.front,
+          back: pred.back
+        });
       }
-      console.log(`📊 使用自动样本量: ${SAMPLE_COUNT.zhouyi}组/模型（基于${dataVolume}期数据）`);
-    }
+      return preds;
+    };
 
-    const zhouyiPredictions = [];
-    for (let i = 0; i < SAMPLE_COUNT.zhouyi; i++) {
-      const pred = this.generateZhouyiPrediction(i);
-      zhouyiPredictions.push({
-        front: pred.slice(0, CONFIG.FRONT_COUNT),
-        back: pred.slice(CONFIG.FRONT_COUNT)
-      });
-    }
-
-    const bayesianPredictions = [];
-    for (let i = 0; i < SAMPLE_COUNT.bayesian; i++) {
-      const pred = this.generateBayesianPrediction();
-      bayesianPredictions.push({
-        front: pred.slice(0, CONFIG.FRONT_COUNT),
-        back: pred.slice(CONFIG.FRONT_COUNT)
-      });
-    }
-
-    // 旋转矩阵：根据目标样本数动态调整批次
-    const rotationPredictions = [];
-    const rotationBatches = Math.ceil(SAMPLE_COUNT.rotation / 5);
-    for (let i = 0; i < rotationBatches; i++) {
-      const batch = this.generateRotationMatrixPrediction(5);
-      rotationPredictions.push(...batch);
-    }
-
-    // 生成混合模型预测（多次采样）
-    const hybridPredictions = [];
-    for (let i = 0; i < SAMPLE_COUNT.hybrid; i++) {
-      const pred = this.generateHybridPrediction();
-      hybridPredictions.push({
-        front: pred.slice(0, CONFIG.FRONT_COUNT),
-        back: pred.slice(CONFIG.FRONT_COUNT)
-      });
-    }
-
-    // 生成区间频率分析预测（多次采样）
-    const zoneFrequencyPredictions = [];
-    for (let i = 0; i < SAMPLE_COUNT.zone_frequency; i++) {
-      const pred = this.generateZoneFrequencyPrediction(i);  // 传入seed参数增加多样性
-      zoneFrequencyPredictions.push({
-        front: pred.slice(0, CONFIG.FRONT_COUNT),
-        back: pred.slice(CONFIG.FRONT_COUNT)
-      });
-    }
+    const bayesianPreds = generatePredictions('bayesian', sampleCount);
+    const weightedPreds = generatePredictions('weighted', sampleCount);
+    const omissionPreds = generatePredictions('omission', sampleCount);
+    const distributionPreds = generatePredictions('distribution', sampleCount);
+    const zoneFreqPreds = generatePredictions('zone_frequency', sampleCount);
 
     // 计算每个模型的命中率
     const calculateHitRate = (predictions, actual) => {
       let totalFrontHits = 0;
       let totalBackHits = 0;
-      let totalPredictions = predictions.length;
+      const totalPredictions = predictions.length;
 
       predictions.forEach(pred => {
         const frontSet = new Set(actual.front);
         const backSet = new Set(actual.back);
-        
-        pred.front.forEach(num => {
-          if (frontSet.has(num)) totalFrontHits++;
-        });
-        
-        pred.back.forEach(num => {
-          if (backSet.has(num)) totalBackHits++;
-        });
+        pred.front.forEach(num => { if (frontSet.has(num)) totalFrontHits++; });
+        pred.back.forEach(num => { if (backSet.has(num)) totalBackHits++; });
       });
 
       return {
@@ -1364,92 +1139,41 @@ class LotteryAnalyzer {
         totalHits: totalFrontHits + totalBackHits,
         avgTotalHits: ((totalFrontHits + totalBackHits) / totalPredictions).toFixed(2),
         sampleCount: totalPredictions,
-        // 理论期望值（随机选择）
-        expectedFrontRate: 14.3,  // 5/35 = 14.3%
-        expectedBackRate: 16.7    // 2/12 = 16.7%
+        expectedFrontRate: 14.3,
+        expectedBackRate: 16.7
       };
     };
 
-    const zhouyiStats = calculateHitRate(zhouyiPredictions, latestDraw);
-    const bayesianStats = calculateHitRate(bayesianPredictions, latestDraw);
-    const rotationStats = calculateHitRate(rotationPredictions, latestDraw);
-    const hybridStats = calculateHitRate(hybridPredictions, latestDraw);
-    const zoneFrequencyStats = calculateHitRate(zoneFrequencyPredictions, latestDraw);  // 新增：区间频率分析
+    const bayesianStats = calculateHitRate(bayesianPreds, latestDraw);
+    const weightedStats = calculateHitRate(weightedPreds, latestDraw);
+    const omissionStats = calculateHitRate(omissionPreds, latestDraw);
+    const distributionStats = calculateHitRate(distributionPreds, latestDraw);
+    const zoneFreqStats = calculateHitRate(zoneFreqPreds, latestDraw);
 
-    // 综合评分算法（优化版 v7 - 尊重混合模型的自然优势）
-    // 考虑因素：前区命中率、后区命中率、稳定性、样本覆盖度、一致性
+    // 综合评分算法
     const calculateScore = (stats) => {
-      // 根据理论期望值调整权重（前区更难命中，给予更高权重）
-      const frontWeight = 0.55;  // 前区权重55%（5/35=14.3%，难度更高）
-      const backWeight = 0.45;   // 后区权重45%（2/12=16.7%，相对容易）
-      
-      // 基础分数（加权平均）
-      const baseScore = parseFloat(stats.frontHitRate) * frontWeight + 
+      const frontWeight = 0.55;
+      const backWeight = 0.45;
+      const baseScore = parseFloat(stats.frontHitRate) * frontWeight +
                        parseFloat(stats.backHitRate) * backWeight;
-      
-      // 稳定性因子（多样本时给予更高权重）
-      // 80组以上为满分，鼓励更大样本
-      const stabilityFactor = stats.sampleCount >= 80 ? 1.0 : 
-                             stats.sampleCount >= 60 ? 0.99 : 
+      const stabilityFactor = stats.sampleCount >= 80 ? 1.0 :
+                             stats.sampleCount >= 60 ? 0.99 :
                              stats.sampleCount >= 50 ? 0.97 : 0.95;
-      
-      // 覆盖度因子（样本越多越可靠，80组为满分）
       const coverageFactor = Math.min(stats.sampleCount / 80, 1.0);
-      
-      // 超过期望值的奖励因子
-      const expectedTotal = parseFloat(stats.expectedFrontRate) * frontWeight + 
+      const expectedTotal = parseFloat(stats.expectedFrontRate) * frontWeight +
                            parseFloat(stats.expectedBackRate) * backWeight;
       const performanceRatio = baseScore / expectedTotal;
-      const bonusFactor = performanceRatio > 1.2 ? 1.05 :  // 超出期望20%以上，额外奖励5%
-                         performanceRatio > 1.1 ? 1.03 :   // 超出期望10%以上，奖励3%
-                         1.0;
-      
-      // 不设置混合模型惩罚，尊重其自然优势
-      // 混合模型作为融合模型，理应表现更稳定
+      const bonusFactor = performanceRatio > 1.2 ? 1.05 :
+                         performanceRatio > 1.1 ? 1.03 : 1.0;
       return baseScore * stabilityFactor * (0.8 + 0.2 * coverageFactor) * bonusFactor;
     };
 
     const models = [
-      {
-        name: '周易时空',
-        key: 'zhouyi',
-        stats: zhouyiStats,
-        score: calculateScore(zhouyiStats),
-        predictions: zhouyiPredictions,
-        characteristics: ['传统智慧', '时间因子', '卦象分析']
-      },
-      {
-        name: '贝叶斯动态',
-        key: 'bayesian',
-        stats: bayesianStats,
-        score: calculateScore(bayesianStats),
-        predictions: bayesianPredictions,
-        characteristics: ['概率统计', '动态调整', '遗漏分析']
-      },
-      {
-        name: '旋转矩阵',
-        key: 'rotation',
-        stats: rotationStats,
-        score: calculateScore(rotationStats),
-        predictions: rotationPredictions,
-        characteristics: ['组合数学', '多策略', '高覆盖']
-      },
-      {
-        name: '混合模型',
-        key: 'hybrid',
-        stats: hybridStats,
-        score: calculateScore(hybridStats),
-        predictions: hybridPredictions,
-        characteristics: ['多模融合', '投票机制', '智能加权']
-      },
-      {
-        name: '区间频率分析',
-        key: 'zone_frequency',
-        stats: zoneFrequencyStats,
-        score: calculateScore(zoneFrequencyStats),
-        predictions: zoneFrequencyPredictions,
-        characteristics: ['区间定位', '频率统计', '热区选号']  // 新增：区间频率分析
-      }
+      { name: '贝叶斯动态', key: 'bayesian', stats: bayesianStats, score: calculateScore(bayesianStats), predictions: bayesianPreds, characteristics: ['概率统计', '动态调整', '遗漏分析'] },
+      { name: '频率加权', key: 'weighted', stats: weightedStats, score: calculateScore(weightedStats), predictions: weightedPreds, characteristics: ['历史频率', '条件概率', '加权选择'] },
+      { name: '遗漏分析', key: 'omission', stats: omissionStats, score: calculateScore(omissionStats), predictions: omissionPreds, characteristics: ['遗漏回归', '条件概率', '关联性'] },
+      { name: '正态分布', key: 'distribution', stats: distributionStats, score: calculateScore(distributionStats), predictions: distributionPreds, characteristics: ['统计分布', '和值引导', '组合评估'] },
+      { name: '区间频率分析', key: 'zone_frequency', stats: zoneFreqStats, score: calculateScore(zoneFreqStats), predictions: zoneFreqPreds, characteristics: ['区间定位', '频率统计', '热区选号'] }
     ];
 
     // 按分数排序
@@ -1458,89 +1182,42 @@ class LotteryAnalyzer {
     const bestModel = models[0];
     const secondModel = models[1];
     const thirdModel = models[2];
-    const fourthModel = models[3];
 
     // 找出各维度的最佳模型
-    const bestFrontModel = [...models].sort((a, b) => 
+    const bestFrontModel = [...models].sort((a, b) =>
       parseFloat(b.stats.frontHitRate) - parseFloat(a.stats.frontHitRate)
     )[0];
-    
-    const bestBackModel = [...models].sort((a, b) => 
+    const bestBackModel = [...models].sort((a, b) =>
       parseFloat(b.stats.backHitRate) - parseFloat(a.stats.backHitRate)
     )[0];
 
-    // 生成推荐理由（优化版 v5 - 强调混合模型的优势地位）
+    // 生成推荐理由
     let reason = '';
     const bestBackRate = parseFloat(bestModel.stats.backHitRate);
     const bestFrontRate = parseFloat(bestModel.stats.frontHitRate);
     const secondBackRate = parseFloat(secondModel.stats.backHitRate);
-    
-    // 检查是否是混合模型
-    const isHybridBest = bestModel.key === 'hybrid';
-    
-    if (isHybridBest) {
-      // 混合模型的特殊说明（正面肯定其优势）
-      reason = `混合模型融合了三大基础模型的优势，通过投票机制和智能加权，`; 
-      
-      if (bestBackRate > 50) {
-        reason += `在后区预测上表现卓越（${bestModel.stats.backHitRate}%），远超随机期望；`;
-      } else if (bestBackRate > 40) {
-        reason += `在后区预测上表现出色（${bestModel.stats.backHitRate}%），高于随机期望；`;
-      } else if (bestFrontRate > 18) {
-        reason += `在前区预测上相对稳定（${bestModel.stats.frontHitRate}%），优于随机选择；`;
-      } else {
-        reason += '整体表现均衡稳定，多模型融合有效降低单一模型的随机性偏差；';
-      }
-      
-      // 说明为什么推荐混合模型
-      const scoreDiff = ((bestModel.score - secondModel.score) / secondModel.score * 100).toFixed(1);
-      reason += `\n📊 优势：比第二名高出${scoreDiff}%，集成学习的稳定性优势明显。`;
-      
-      // 提示用户可以尝试单一模型获取不同视角
-      reason += '\n💡 建议：混合模型是最稳妥的选择，但也可尝试单一模型探索不同思路。';
-      
-      // 特别推荐第二名的单一模型
-      reason += `\n🎯 备选：${secondModel.name}排名第二，可作为补充验证。`;
-    } else {
-      // 基础模型的推荐理由（罕见情况）
-      if (bestBackRate > 55) {
-        reason = `该模型在后区预测上表现卓越（命中率${bestModel.stats.backHitRate}%），远超随机期望（16.7%）；`;
-      } else if (bestBackRate > 45) {
-        reason = `该模型后区命中率较高（${bestModel.stats.backHitRate}%），明显优于随机选择；`;
-      } else if (bestBackRate > 35) {
-        reason = `该模型后区表现良好（${bestModel.stats.backHitRate}%），略高于随机期望；`;
-      } else if (bestFrontRate > 20) {
-        reason = `该模型在前区预测上表现出色（命中率${bestModel.stats.frontHitRate}%），远超随机期望（14.3%）；`;
-      } else if (bestFrontRate > 16) {
-        reason = `该模型前区表现较好（${bestModel.stats.frontHitRate}%），优于随机选择；`;
-      } else {
-        reason = `综合多维度分析，${bestModel.name}在${dataVolume}期历史数据中整体表现最优；`;
-      }
 
-      // 对比其他模型
-      const scoreDiffPercent = ((bestModel.score - secondModel.score) / secondModel.score * 100).toFixed(1);
-      
-      if (bestBackRate > secondBackRate * 1.4) {
-        reason += '且后区命中率大幅领先其他模型（优势超过40%）。';
-      } else if (bestBackRate > secondBackRate * 1.2) {
-        reason += '后区优势明显（领先第二名20%以上）。';
-      } else if (scoreDiffPercent < 3) {
-        reason += `与第二名差距微小（仅${scoreDiffPercent}%），建议结合使用或交替尝试。`;
-      } else if (scoreDiffPercent < 8) {
-        reason += `各项指标相对均衡，小幅领先其他模型（${scoreDiffPercent}%）。`;
-      } else {
-        reason += `综合得分显著领先（${scoreDiffPercent}%），各项指标表现稳定。`;
-      }
-      
-      // 特别说明：这种情况很少见
-      reason += '\n💡 注意：这是一个罕见的情况，单一模型超越了混合模型，值得重点关注！';
+    if (bestBackRate > 50) {
+      reason = `${bestModel.name}在后区预测上表现卓越（命中率${bestModel.stats.backHitRate}%），远超随机期望（16.7%）；`;
+    } else if (bestBackRate > 40) {
+      reason = `${bestModel.name}后区命中率较高（${bestModel.stats.backHitRate}%），明显优于随机选择；`;
+    } else if (bestFrontRate > 18) {
+      reason = `${bestModel.name}在前区预测上表现出色（命中率${bestModel.stats.frontHitRate}%），优于随机期望（14.3%）；`;
+    } else {
+      reason = `综合多维度分析，${bestModel.name}在${dataVolume}期历史数据中整体表现最优；`;
     }
 
-    // 添加模型特色说明
+    const scoreDiffPercent = ((bestModel.score - secondModel.score) / secondModel.score * 100).toFixed(1);
+    if (bestBackRate > secondBackRate * 1.4) {
+      reason += '且后区命中率大幅领先其他模型。';
+    } else if (scoreDiffPercent < 3) {
+      reason += `与第二名差距微小（仅${scoreDiffPercent}%），建议结合使用。`;
+    } else {
+      reason += `综合得分领先第二名${scoreDiffPercent}%。`;
+    }
+
     const charStr = bestModel.characteristics.join('、');
     reason += `\n💡 特色：${charStr}`;
-    
-    // 添加多维度推荐信息
     if (bestFrontModel.key !== bestModel.key) {
       reason += `\n🎯 前区最佳: ${bestFrontModel.name} (${bestFrontModel.stats.frontHitRate}%)`;
     }
@@ -1548,14 +1225,9 @@ class LotteryAnalyzer {
       reason += `\n🎯 后区最佳: ${bestBackModel.name} (${bestBackModel.stats.backHitRate}%)`;
     }
 
-    // 添加备选建议（更智能的推荐）
     let alternativeSuggestion = '';
-    if (thirdModel && parseFloat(thirdModel.stats.backHitRate) > 45) {
-      alternativeSuggestion = `\n🔄 备选方案：${thirdModel.name}在后区也有出色表现（${thirdModel.stats.backHitRate}%），可作为补充验证。`;
-    } else if (thirdModel && parseFloat(thirdModel.stats.frontHitRate) > 17) {
-      alternativeSuggestion = `\n🔄 备选方案：${thirdModel.name}在前区表现不错（${thirdModel.stats.frontHitRate}%），可交叉参考。`;
-    } else if (fourthModel && Math.abs(fourthModel.score - bestModel.score) < 10) {
-      alternativeSuggestion = `\n🔄 备选方案：${fourthModel.name}与最佳模型差距不大，也可尝试。`;
+    if (thirdModel && parseFloat(thirdModel.stats.backHitRate) > 40) {
+      alternativeSuggestion = `\n🔄 备选方案：${thirdModel.name}在后区也有不错表现（${thirdModel.stats.backHitRate}%），可交叉参考。`;
     }
 
     const result = {
@@ -1565,8 +1237,8 @@ class LotteryAnalyzer {
       alternativeSuggestion,
       latestDraw,
       analysisTime: new Date().toLocaleString('zh-CN'),
-      dataVolume: dataVolume,  // 添加数据量信息
-      sampleSize: SAMPLE_COUNT.zhouyi  // 添加样本量信息
+      dataVolume: dataVolume,
+      sampleSize: sampleCount
     };
 
     // 缓存结果
@@ -1578,122 +1250,78 @@ class LotteryAnalyzer {
 
     console.log(`✅ 推荐结果已缓存（有效期${CACHE_DURATION/60000}分钟，数据量${dataVolume}期）`);
     console.log(`📊 最佳模型: ${bestModel.name} (得分: ${bestModel.score.toFixed(2)})`);
-    console.log(`📈 样本量: 各模型${SAMPLE_COUNT.zhouyi}组（总计${SAMPLE_COUNT.zhouyi * 4}组）`);
+    console.log(`📈 样本量: 各模型${sampleCount}组（总计${sampleCount * 5}组）`);
     console.log(`📋 各模型得分:`, models.map(m => `${m.name}:${m.score.toFixed(2)}`).join(', '));
-    console.log(`💡 历史数据: ${dataVolume}期（已达到优秀水平，建议持续积累）`);
 
     return result;
   }
 
   /**
-   * 评估模型性能
+   * 评估模型性能（精简版：5个模型）
    */
   evaluateModelPerformance(windowSize = 20) {
     const cacheKey = `modelPerformance_${windowSize}`;
     if (this.cache.modelPerformance && this.cache.modelPerformance.key === cacheKey) {
       return this.cache.modelPerformance.result;
     }
-    
+
+    const modelKeys = ['bayesian', 'weighted', 'omission', 'distribution', 'zone_frequency'];
+    const defaultWeights = {};
+    modelKeys.forEach(k => defaultWeights[k] = 1.0 / modelKeys.length);
+
     if (this.historyData.length < windowSize + 5) {
-      // 数据不足，返回默认权重
-      const defaultWeights = {
-        zhouyi: 0.35,
-        bayesian: 0.35,
-        rotation: 0.30
-      };
       this.cache.modelPerformance = { key: cacheKey, result: defaultWeights };
       return defaultWeights;
     }
-    
-    // 使用滑动窗口测试各模型表现
-    const modelScores = {
-      zhouyi: 0,
-      bayesian: 0,
-      rotation: 0
-    };
-    
+
+    const modelScores = {};
+    modelKeys.forEach(k => modelScores[k] = 0);
     let testCount = 0;
-    
-    // 从后往前测试最近windowSize期
+
     for (let i = this.historyData.length - windowSize; i < this.historyData.length; i++) {
       const actualDraw = this.historyData[i];
-      
-      // 使用该期之前的数据进行预测
       const tempAnalyzer = new LotteryAnalyzer();
       const historyForPrediction = this.historyData.slice(0, i);
-      const dataStr = historyForPrediction.map(d => 
+      const dataStr = historyForPrediction.map(d =>
         `${d.front.join(' ')} ${d.back.join(' ')}`
       ).join('\n');
       tempAnalyzer.loadHistoryData(dataStr, '临时数据');
-      
-      // 生成各模型的预测
+
       try {
-        const zhouyiPred = tempAnalyzer.generateZhouyiPrediction();
-        const bayesianPred = tempAnalyzer.generateBayesianPrediction();
-        const rotationPred = tempAnalyzer.generateRotationMatrixPrediction(1)[0];
-        
-        // 计算每个模型的命中数
-        const zhouyiHits = this.calculateHits(zhouyiPred, actualDraw);
-        const bayesianHits = this.calculateHits(bayesianPred, actualDraw);
-        const rotationHits = this.calculateHits([...rotationPred.front, ...rotationPred.back], actualDraw);
-        
-        modelScores.zhouyi += zhouyiHits;
-        modelScores.bayesian += bayesianHits;
-        modelScores.rotation += rotationHits;
-        
+        for (const key of modelKeys) {
+          const pred = tempAnalyzer.generateUniqueGroups(key, 1)[0];
+          const hits = this.calculateHits([...pred.front, ...pred.back], actualDraw);
+          modelScores[key] += hits;
+        }
         testCount++;
       } catch (error) {
         console.warn('模型评估出错:', error.message);
       }
     }
-    
-    // 计算平均命中数
-    const avgScores = {
-      zhouyi: testCount > 0 ? modelScores.zhouyi / testCount : 0,
-      bayesian: testCount > 0 ? modelScores.bayesian / testCount : 0,
-      rotation: testCount > 0 ? modelScores.rotation / testCount : 0
-    };
-    
-    // 归一化为权重（总和为1）
-    const totalScore = avgScores.zhouyi + avgScores.bayesian + avgScores.rotation;
-    
+
+    const avgScores = {};
+    modelKeys.forEach(k => avgScores[k] = testCount > 0 ? modelScores[k] / testCount : 0);
+
+    const totalScore = Object.values(avgScores).reduce((a, b) => a + b, 0);
     let weights;
     if (totalScore > 0) {
-      weights = {
-        zhouyi: avgScores.zhouyi / totalScore,
-        bayesian: avgScores.bayesian / totalScore,
-        rotation: avgScores.rotation / totalScore
-      };
+      weights = {};
+      modelKeys.forEach(k => weights[k] = avgScores[k] / totalScore);
     } else {
-      // 如果所有模型都未命中，使用默认权重
-      weights = {
-        zhouyi: 0.35,
-        bayesian: 0.35,
-        rotation: 0.30
-      };
+      weights = { ...defaultWeights };
     }
-    
-    // 添加平滑因子，避免权重波动过大
-    const smoothingFactor = 0.7; // 70%新权重 + 30%旧权重
-    const defaultWeights = { zhouyi: 0.35, bayesian: 0.35, rotation: 0.30 };
-    
-    const smoothedWeights = {
-      zhouyi: weights.zhouyi * smoothingFactor + defaultWeights.zhouyi * (1 - smoothingFactor),
-      bayesian: weights.bayesian * smoothingFactor + defaultWeights.bayesian * (1 - smoothingFactor),
-      rotation: weights.rotation * smoothingFactor + defaultWeights.rotation * (1 - smoothingFactor)
-    };
-    
-    // 再次归一化
-    const smoothedTotal = smoothedWeights.zhouyi + smoothedWeights.bayesian + smoothedWeights.rotation;
-    const finalWeights = {
-      zhouyi: smoothedWeights.zhouyi / smoothedTotal,
-      bayesian: smoothedWeights.bayesian / smoothedTotal,
-      rotation: smoothedWeights.rotation / smoothedTotal
-    };
-    
-    // 缓存结果
+
+    // 平滑因子
+    const smoothingFactor = 0.7;
+    const smoothedWeights = {};
+    modelKeys.forEach(k =>
+      smoothedWeights[k] = weights[k] * smoothingFactor + defaultWeights[k] * (1 - smoothingFactor)
+    );
+    const smoothedTotal = Object.values(smoothedWeights).reduce((a, b) => a + b, 0);
+    const finalWeights = {};
+    modelKeys.forEach(k => finalWeights[k] = smoothedWeights[k] / smoothedTotal);
+
     this.cache.modelPerformance = { key: cacheKey, result: finalWeights };
-    
     return finalWeights;
   }
 

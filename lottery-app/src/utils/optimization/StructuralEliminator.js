@@ -1,17 +1,15 @@
 /**
- * 结构杀号器 - 基于彩票开奖规律的结构化杀号算法
+ * 结构杀号器 - 基于彩票开奖规律的结构化杀号算法（精简版）
  * 
- * 核心策略：
+ * 核心策略（3种，去除与其他算法重叠的增强重号和冷热过滤）：
  * 1. 7区断区杀号：大乐透前区35个号码分7区，每期大概率断1-2区
  * 2. 和值范围过滤：前区和值集中在65-115，杀极端组合
- * 3. 重号杀号增强：基于历史重号率动态调整杀号数量
- * 4. 尾数频率杀号：高频尾数只保留1-2个
- * 5. 冷热号综合过滤：热号降温+冷号回补检测
+ * 3. 尾数频率杀号：高频尾数只保留1-2个
  * 
  * 增强功能：
- * 6. 回测验证：用历史数据测试杀号命中率
- * 7. 混合模式：同时运行基础+结构算法，取并集或交集
- * 8. 智能推荐：根据数据特征自动推荐杀号模式
+ * - 回测验证：用历史数据测试杀号命中率
+ * - 混合模式：同时运行基础+结构算法，取交集（双重验证）
+ * - 智能推荐：根据数据特征自动推荐杀号模式
  */
 
 import { CONFIG } from '../core/Config.js';
@@ -43,9 +41,7 @@ export class StructuralEliminator {
     // 执行各算法
     const zoneBreakResult = StructuralEliminator._zoneBreakKill(activeData, options.zoneBreakEnabled !== false);
     const sumRangeResult = StructuralEliminator._sumRangeKill(activeData, options.sumMin || 65, options.sumMax || 115);
-    const repeatEnhancedResult = StructuralEliminator._enhancedRepeatKill(analyzer, activeData, options.repeatKillCount || 3);
     const tailFreqResult = StructuralEliminator._tailFrequencyKill(analyzer, activeData, options.tailKillEnabled !== false);
-    const hotColdResult = StructuralEliminator._hotColdFilter(activeData, options.hotPeriods || 10, options.coldPeriods || 20);
 
     // 合并杀号结果
     const frontEliminatedSet = new Set();
@@ -70,12 +66,7 @@ export class StructuralEliminator {
 
     mergeFront(zoneBreakResult.front, '7区断区预测');
     mergeFront(sumRangeResult.front, '和值范围过滤');
-    mergeFront(repeatEnhancedResult.front, '重号杀号增强');
     mergeFront(tailFreqResult.front, '尾数频率杀号');
-    mergeFront(hotColdResult.front, '冷热号综合过滤');
-
-    mergeBack(repeatEnhancedResult.back, '重号杀号增强');
-    mergeBack(hotColdResult.back, '冷热号综合过滤');
 
     // 计算保留号码
     const frontRemaining = Array.from({ length: CONFIG.FRONT_RANGE }, (_, i) => i + 1)
@@ -119,9 +110,7 @@ export class StructuralEliminator {
     const algorithmDetails = [
       { name: '7区断区杀号', description: '前区分7区（每区5号），预测断1-2区并杀掉对应号码', frontCount: zoneBreakResult.front.length, backCount: zoneBreakResult.back.length, frontNumbers: zoneBreakResult.front, backNumbers: zoneBreakResult.back },
       { name: '极端号码倾向杀号', description: `近10期平均和值${sumRangeResult.details?.avgSum?.toFixed(1) || '未知'}，趋势偏移时杀贡献偏差过大的号码`, frontCount: sumRangeResult.front.length, backCount: sumRangeResult.back.length, frontNumbers: sumRangeResult.front, backNumbers: sumRangeResult.back },
-      { name: '重号杀号增强', description: `基于历史重号率动态杀号（前区重号率${repeatEnhancedResult.details?.avgFrontRepeatCount?.toFixed(1) || '未知'}，后区${repeatEnhancedResult.details?.avgBackRepeatCount?.toFixed(1) || '未知'})`, frontCount: repeatEnhancedResult.front.length, backCount: repeatEnhancedResult.back.length, frontNumbers: repeatEnhancedResult.front, backNumbers: repeatEnhancedResult.back },
       { name: '尾数频率杀号', description: '近3期高频尾数只保留1-2个，杀其余同尾号', frontCount: tailFreqResult.front.length, backCount: tailFreqResult.back.length, frontNumbers: tailFreqResult.front, backNumbers: tailFreqResult.back },
-      { name: '冷热号综合过滤', description: `热号(${options.hotPeriods || 10}期≥3次)降温，冷号(${options.coldPeriods || 20}期未开)批量杀`, frontCount: hotColdResult.front.length, backCount: hotColdResult.back.length, frontNumbers: hotColdResult.front, backNumbers: hotColdResult.back },
     ];
 
     const summary = `结构杀号完成：前区杀掉${frontEliminated.length}个（保留${frontRemaining.length}个），后区杀掉${backEliminated.length}个（保留${backRemaining.length}个）`;
@@ -137,120 +126,64 @@ export class StructuralEliminator {
       rawResults: {
         zoneBreak: zoneBreakResult,
         sumRange: sumRangeResult,
-        repeatEnhanced: repeatEnhancedResult,
-        tailFreq: tailFreqResult,
-        hotCold: hotColdResult
+        tailFreq: tailFreqResult
       }
     };
   }
 
   /**
-   * 混合模式杀号 - 同时运行基础+结构算法
+   * 混合模式杀号 - 同时运行基础+结构算法，取交集（双重验证，更保守）
    * @param {LotteryAnalyzer} analyzer - 分析器实例
    * @param {Object} options - 配置选项
-   * @param {string} options.mergeMode - 'union'(并集：任一杀掉即杀) | 'intersect'(交集：两者都杀才杀)
    * @returns {Object} 混合杀号结果
    */
   static mixedEliminate(analyzer, options = {}) {
-    const mergeMode = options.mergeMode || 'union';
-    const activeData = analyzer.getActiveData();
-
     // 分别执行基础杀号和结构杀号
     const basicResult = NumberEliminator.eliminate(analyzer, options.basicOptions || {});
     const structuralResult = StructuralEliminator.eliminate(analyzer, options.structuralOptions || {});
 
-    if (mergeMode === 'union') {
-      // 并集模式：任一算法杀掉的号码都被杀
-      const frontEliminatedSet = new Set([...basicResult.frontEliminated, ...structuralResult.frontEliminated]);
-      const backEliminatedSet = new Set([...basicResult.backEliminated, ...structuralResult.backEliminated]);
+    // 交集模式：只有两者都杀掉的号码才被杀（更保守）
+    const frontEliminatedSet = new Set(
+      basicResult.frontEliminated.filter(n => structuralResult.frontEliminated.includes(n))
+    );
+    const backEliminatedSet = new Set(
+      basicResult.backEliminated.filter(n => structuralResult.backEliminated.includes(n))
+    );
 
-      const reasons = {};
-      // 合并基础杀号原因
-      for (const num of basicResult.frontEliminated) {
-        if (!reasons[num]) reasons[num] = [];
-        reasons[num].push(...(basicResult.reasons[num] || []));
-      }
-      for (const num of basicResult.backEliminated) {
-        if (!reasons[num]) reasons[num] = [];
-        reasons[num].push(...(basicResult.reasons[num] || []));
-      }
-      // 合并结构杀号原因（加"结构"前缀区分）
-      for (const num of structuralResult.frontEliminated) {
-        if (!reasons[num]) reasons[num] = [];
-        reasons[num].push(...(structuralResult.reasons[num] || []).map(r => `[结构]${r}`));
-      }
-      for (const num of structuralResult.backEliminated) {
-        if (!reasons[num]) reasons[num] = [];
-        reasons[num].push(...(structuralResult.reasons[num] || []).map(r => `[结构]${r}`));
-      }
-
-      const frontRemaining = Array.from({ length: CONFIG.FRONT_RANGE }, (_, i) => i + 1)
-        .filter(n => !frontEliminatedSet.has(n));
-      const backRemaining = Array.from({ length: CONFIG.BACK_RANGE }, (_, i) => i + 1)
-        .filter(n => !backEliminatedSet.has(n));
-
-      // 安全阈值检查
-      StructuralEliminator._ensureMinRemaining(frontEliminatedSet, backEliminatedSet, frontRemaining, backRemaining, reasons);
-
-      return {
-        frontEliminated: [...frontEliminatedSet].sort((a, b) => a - b),
-        backEliminated: [...backEliminatedSet].sort((a, b) => a - b),
-        frontRemaining: Array.from({ length: CONFIG.FRONT_RANGE }, (_, i) => i + 1).filter(n => !frontEliminatedSet.has(n)),
-        backRemaining: Array.from({ length: CONFIG.BACK_RANGE }, (_, i) => i + 1).filter(n => !backEliminatedSet.has(n)),
-        reasons,
-        summary: `混合杀号(并集)完成：前区杀${frontEliminatedSet.size}个(保留${frontRemaining.length}个)，后区杀${backEliminatedSet.size}个(保留${backRemaining.length}个)`,
-        algorithmDetails: [
-          ...basicResult.algorithmDetails.map(a => ({ ...a, source: '基础' })),
-          ...structuralResult.algorithmDetails.map(a => ({ ...a, source: '结构', frontNumbers: a.frontNumbers || [], backNumbers: a.backNumbers || [] }))
-        ],
-        mode: 'mixed_union',
-        basicResult,
-        structuralResult
-      };
-    } else {
-      // 交集模式：只有两者都杀掉的号码才被杀（更保守）
-      const frontEliminatedSet = new Set(
-        basicResult.frontEliminated.filter(n => structuralResult.frontEliminated.includes(n))
-      );
-      const backEliminatedSet = new Set(
-        basicResult.backEliminated.filter(n => structuralResult.backEliminated.includes(n))
-      );
-
-      const reasons = {};
-      for (const num of frontEliminatedSet) {
-        reasons[num] = [
-          ...(basicResult.reasons[num] || []),
-          ...(structuralResult.reasons[num] || []).map(r => `[结构]${r}`)
-        ];
-      }
-      for (const num of backEliminatedSet) {
-        reasons[num] = [
-          ...(basicResult.reasons[num] || []),
-          ...(structuralResult.reasons[num] || []).map(r => `[结构]${r}`)
-        ];
-      }
-
-      const frontRemaining = Array.from({ length: CONFIG.FRONT_RANGE }, (_, i) => i + 1)
-        .filter(n => !frontEliminatedSet.has(n));
-      const backRemaining = Array.from({ length: CONFIG.BACK_RANGE }, (_, i) => i + 1)
-        .filter(n => !backEliminatedSet.has(n));
-
-      return {
-        frontEliminated: [...frontEliminatedSet].sort((a, b) => a - b),
-        backEliminated: [...backEliminatedSet].sort((a, b) => a - b),
-        frontRemaining,
-        backRemaining,
-        reasons,
-        summary: `混合杀号(交集)完成：前区杀${frontEliminatedSet.size}个(保留${frontRemaining.length}个)，后区杀${backEliminatedSet.size}个(保留${backRemaining.length}个)`,
-        algorithmDetails: [
-          ...basicResult.algorithmDetails.map(a => ({ ...a, source: '基础' })),
-          ...structuralResult.algorithmDetails.map(a => ({ ...a, source: '结构', frontNumbers: a.frontNumbers || [], backNumbers: a.backNumbers || [] }))
-        ],
-        mode: 'mixed_intersect',
-        basicResult,
-        structuralResult
-      };
+    const reasons = {};
+    for (const num of frontEliminatedSet) {
+      reasons[num] = [
+        ...(basicResult.reasons[num] || []),
+        ...(structuralResult.reasons[num] || []).map(r => `[结构]${r}`)
+      ];
     }
+    for (const num of backEliminatedSet) {
+      reasons[num] = [
+        ...(basicResult.reasons[num] || []),
+        ...(structuralResult.reasons[num] || []).map(r => `[结构]${r}`)
+      ];
+    }
+
+    const frontRemaining = Array.from({ length: CONFIG.FRONT_RANGE }, (_, i) => i + 1)
+      .filter(n => !frontEliminatedSet.has(n));
+    const backRemaining = Array.from({ length: CONFIG.BACK_RANGE }, (_, i) => i + 1)
+      .filter(n => !backEliminatedSet.has(n));
+
+    return {
+      frontEliminated: [...frontEliminatedSet].sort((a, b) => a - b),
+      backEliminated: [...backEliminatedSet].sort((a, b) => a - b),
+      frontRemaining,
+      backRemaining,
+      reasons,
+      summary: `混合杀号(交集)完成：前区杀${frontEliminatedSet.size}个(保留${frontRemaining.length}个)，后区杀${backEliminatedSet.size}个(保留${backRemaining.length}个)`,
+      algorithmDetails: [
+        ...basicResult.algorithmDetails.map(a => ({ ...a, source: '基础' })),
+        ...structuralResult.algorithmDetails.map(a => ({ ...a, source: '结构', frontNumbers: a.frontNumbers || [], backNumbers: a.backNumbers || [] }))
+      ],
+      mode: 'mixed_intersect',
+      basicResult,
+      structuralResult
+    };
   }
 
   /**
@@ -322,12 +255,11 @@ export class StructuralEliminator {
     // 基于特征推荐模式
     let recommendedMode = 'basic';
     let reason = '';
-    const scoreMap = { basic: 0, structural: 0, mixed_union: 0, mixed_intersect: 0 };
+    const scoreMap = { basic: 0, structural: 0, mixed_intersect: 0 };
 
     // 断区明显 → 结构杀号(7区断区)得分高
     if (features.emptyZones >= 1 || features.zoneConcentration > 3) {
       scoreMap.structural += 2;
-      scoreMap.mixed_union += 1;
     }
 
     // 重号率低 → 结构杀号(重号增强)得分高
@@ -339,27 +271,23 @@ export class StructuralEliminator {
     // 和值偏离 → 结构杀号(和值范围)得分高
     if (features.sumOutOfRange >= 2 || avgSum < 65 || avgSum > 115) {
       scoreMap.structural += 2;
-      scoreMap.mixed_union += 1;
     }
 
-    // 热号明显 → 基础杀号(过热检测+Z-score)得分高
+    // 热号明显 → 基础杀号(过热检测)得分高
     if (features.hotNumberCount >= 3 || features.maxFrequency >= 4) {
       scoreMap.basic += 2;
-      scoreMap.mixed_union += 1;
     }
 
     // 尾数集中 → 结构杀号(尾数频率)得分高
     if (features.tailConcentration >= 6) {
       scoreMap.structural += 1;
-      scoreMap.mixed_union += 1;
     }
 
     // 综合特征复杂 → 混合模式得分高
     const activeFeatures = [features.emptyZones >= 1, features.avgRepeatRate < 1, features.sumOutOfRange >= 2, features.hotNumberCount >= 3, features.tailConcentration >= 6];
     const activeCount = activeFeatures.filter(Boolean).length;
     if (activeCount >= 3) {
-      scoreMap.mixed_union += 2;
-      scoreMap.mixed_intersect += 1;
+      scoreMap.mixed_intersect += 2;
     }
 
     // 找出最高分模式
@@ -367,10 +295,9 @@ export class StructuralEliminator {
     recommendedMode = bestMode[0];
 
     const modeNames = {
-      basic: '基础杀号（6种统计算法）',
-      structural: '结构杀号（5种规律算法）',
-      mixed_union: '混合杀号-并集（11种算法联合，激进）',
-      mixed_intersect: '混合杀号-交集（双重验证，保守）'
+      basic: '基础杀号（3种统计算法）',
+      structural: '结构杀号（3种规律算法）',
+      mixed_intersect: '混合杀号-交集（6种算法双重验证，保守）'
     };
 
     const reasonParts = [];
@@ -398,7 +325,7 @@ export class StructuralEliminator {
    * 回测验证 - 用历史数据测试杀号命中率
    * @param {LotteryAnalyzer} analyzer - 分析器实例
    * @param {Object} options - 配置选项
-   * @param {string} options.mode - 'basic' | 'structural' | 'mixed_union' | 'mixed_intersect'
+   * @param {string} options.mode - 'basic' | 'structural' | 'mixed_intersect'
    * @param {number} options.backtestPeriods - 回测期数（默认20，最多30）
    * @returns {Object} 回测结果
    */
@@ -418,8 +345,8 @@ export class StructuralEliminator {
     }
 
     const results = [];
-    const basicOpts = options.basicOptions || { recentPeriods: 30, overheatCount: 6, backOverheatCount: 6, zScoreThreshold: 1.5, consecutiveThreshold: 3, backConsecutiveThreshold: 2 };
-    const structuralOpts = options.structuralOptions || { zoneBreakEnabled: true, sumMin: 65, sumMax: 115, repeatKillCount: 3, tailKillEnabled: true, hotPeriods: 10, coldPeriods: 20 };
+    const basicOpts = options.basicOptions || { recentPeriods: 30, overheatCount: 6, backOverheatCount: 6, consecutiveThreshold: 3, backConsecutiveThreshold: 2 };
+    const structuralOpts = options.structuralOptions || { zoneBreakEnabled: true, sumMin: 65, sumMax: 115, tailKillEnabled: true };
 
     // 逐期回测
     const startIdx = activeData.length - backtestPeriods - 5;
@@ -442,9 +369,6 @@ export class StructuralEliminator {
             break;
           case 'structural':
             elimResult = StructuralEliminator.eliminate(tempAnalyzer, structuralOpts);
-            break;
-          case 'mixed_union':
-            elimResult = StructuralEliminator.mixedEliminate(tempAnalyzer, { mergeMode: 'union', basicOptions: basicOpts, structuralOptions: structuralOpts });
             break;
           case 'mixed_intersect':
             elimResult = StructuralEliminator.mixedEliminate(tempAnalyzer, { mergeMode: 'intersect', basicOptions: basicOpts, structuralOptions: structuralOpts });
@@ -498,7 +422,6 @@ export class StructuralEliminator {
     const modeNames = {
       basic: '基础杀号',
       structural: '结构杀号',
-      mixed_union: '混合杀号(并集)',
       mixed_intersect: '混合杀号(交集)'
     };
 
@@ -545,7 +468,7 @@ export class StructuralEliminator {
     }
   }
 
-  // ====== 5种结构杀号算法 ======
+  // ====== 3种结构杀号算法 ======
 
   /**
    * 算法1：7区断区杀号
@@ -649,72 +572,7 @@ export class StructuralEliminator {
   }
 
   /**
-   * 算法3：重号杀号增强版（前区+后区）
-   * 基于历史重号率动态调整，同时杀前后区上期号码
-   */
-  static _enhancedRepeatKill(analyzer, activeData, killCount = 3) {
-    if (activeData.length < 6) return { front: [], back: [] };
-
-    const lastDraw = activeData[activeData.length - 1];
-    const recentPeriods = Math.min(10, activeData.length - 1);
-
-    // 统计近N期前区平均重号数
-    let totalFrontRepeats = 0;
-    for (let i = 1; i <= recentPeriods; i++) {
-      const curr = activeData[activeData.length - i];
-      const prev = activeData[activeData.length - i - 1];
-      totalFrontRepeats += curr.front.filter(n => prev.front.includes(n)).length;
-    }
-    const avgFrontRepeatCount = totalFrontRepeats / recentPeriods;
-
-    // 统计近N期后区平均重号数
-    let totalBackRepeats = 0;
-    for (let i = 1; i <= recentPeriods; i++) {
-      const curr = activeData[activeData.length - i];
-      const prev = activeData[activeData.length - i - 1];
-      totalBackRepeats += curr.back.filter(n => prev.back.includes(n)).length;
-    }
-    const avgBackRepeatCount = totalBackRepeats / recentPeriods;
-
-    const frontEliminated = [];
-    const backEliminated = [];
-
-    // 前区：如果平均前区重号数<1，杀掉上期killCount个号码
-    if (avgFrontRepeatCount < 1.0) {
-      const freqData = analyzer.frequencyAnalyzer.analyzeFrequency()[0];
-      const lastWithFreq = lastDraw.front.map(n => ({
-        num: n,
-        freq: freqData[n] || 0
-      })).sort((a, b) => b.freq - a.freq);
-
-      const keepCount = Math.max(1, 5 - killCount);
-      const toKeep = lastWithFreq.slice(0, keepCount).map(item => item.num);
-      frontEliminated.push(...lastDraw.front.filter(n => !toKeep.includes(n)));
-    }
-
-    // 后区：如果平均后区重号数<0.5，杀掉上期后区1个号码
-    if (avgBackRepeatCount < 0.5) {
-      const backFreqData = analyzer.frequencyAnalyzer.analyzeFrequency()[1];
-      const lastBackWithFreq = lastDraw.back.map(n => ({
-        num: n,
-        freq: backFreqData[n] || 0
-      })).sort((a, b) => b.freq - a.freq);
-
-      // 后区只杀1个（频率最低的那个）
-      if (lastDraw.back.length > 1) {
-        backEliminated.push(lastBackWithFreq[lastBackWithFreq.length - 1].num);
-      }
-    }
-
-    return {
-      front: frontEliminated.sort((a, b) => a - b),
-      back: backEliminated.sort((a, b) => a - b),
-      details: { avgFrontRepeatCount, avgBackRepeatCount, frontKill: frontEliminated.length, backKill: backEliminated.length }
-    };
-  }
-
-  /**
-   * 算法4：尾数频率杀号
+   * 算法3：尾数频率杀号
    */
   static _tailFrequencyKill(analyzer, activeData, enabled = true) {
     if (!enabled || activeData.length < 3) return { front: [], back: [] };
@@ -764,58 +622,4 @@ export class StructuralEliminator {
     };
   }
 
-  /**
-   * 算法5：冷热号综合过滤
-   */
-  static _hotColdFilter(activeData, hotPeriods = 10, coldPeriods = 20) {
-    if (activeData.length < Math.max(hotPeriods, coldPeriods)) {
-      return { front: [], back: [], details: {} };
-    }
-
-    const recentHot = activeData.slice(-hotPeriods);
-
-    const hotCount = {};
-    for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) hotCount[i] = 0;
-    for (let i = 1; i <= CONFIG.BACK_RANGE; i++) hotCount[i + 100] = 0;
-
-    for (const draw of recentHot) {
-      for (const num of draw.front) hotCount[num]++;
-      for (const num of draw.back) hotCount[num + 100]++;
-    }
-
-    const frontHotEliminated = [];
-    const backHotEliminated = [];
-
-    for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) {
-      if (hotCount[i] >= 3) {
-        const last2 = activeData.slice(-2);
-        const appearedInBoth = last2.every(draw => draw.front.includes(i));
-        if (appearedInBoth) frontHotEliminated.push(i);
-      }
-    }
-
-    for (let i = 1; i <= CONFIG.BACK_RANGE; i++) {
-      if (hotCount[i + 100] >= 3) {
-        const last2 = activeData.slice(-2);
-        const appearedInBoth = last2.every(draw => draw.back.includes(i));
-        if (appearedInBoth) backHotEliminated.push(i);
-      }
-    }
-
-    const coldEliminated = [];
-    for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) {
-      let omission = 0;
-      for (let j = activeData.length - 1; j >= 0; j--) {
-        if (activeData[j].front.includes(i)) break;
-        omission++;
-      }
-      if (omission >= coldPeriods) coldEliminated.push(i);
-    }
-
-    return {
-      front: [...frontHotEliminated, ...coldEliminated].sort((a, b) => a - b),
-      back: backHotEliminated.sort((a, b) => a - b),
-      details: { hotCount, frontHotEliminated, backHotEliminated, coldEliminated }
-    };
-  }
 }

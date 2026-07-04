@@ -1,13 +1,10 @@
 /**
- * 号码杀号器 - 复式玩法核心算法
+ * 号码杀号器 - 复式玩法核心算法（精简版）
  * 
- * 杀号策略：
- * 1. 近N期过热杀号：近30期出现≥6次的号码视为过热，认为热度会下降（前后区统一阈值）
- * 2. Z-score频率偏离杀号：频率标准化偏离超过阈值，统计显著过热
- * 3. 连续出现杀号：号码在连续3+期中出现，趋势过强会回落
- * 4. 二项分布显著性检验：出现概率显著高于理论期望值
- * 5. 趋势动量杀号：近期频率上升趋势过强（动量正值过大）
- * 6. 重号饱和杀号：近期重号率过高时杀掉上一期号码
+ * 杀号策略（3种，去除冗余的统计检验）：
+ * 1. 近N期过热杀号：近30期出现≥6次的号码视为过热，认为热度会下降
+ * 2. 连续出现杀号：号码在连续3+期中出现，趋势过强会回落
+ * 3. 重号饱和杀号：近期重号率过高时杀掉上一期号码
  */
 
 import { CONFIG } from '../core/Config.js';
@@ -20,23 +17,17 @@ export class NumberEliminator {
    * @param {LotteryAnalyzer} analyzer - 分析器实例
    * @param {Object} options - 配置选项
    * @param {number} options.recentPeriods - 近期期数（默认5）
-   * @param {number} options.zScoreThreshold - Z-score阈值（默认1.5）
    * @param {number} options.consecutiveThreshold - 连续出现阈值（默认3）
    * @param {number} options.overheatCount - 过热出现次数阈值（默认3）
    * @param {number} options.backOverheatCount - 后区过热出现次数阈值（默认2，后区号码少更容易过热）
-   * @param {number} options.binomialSignificance - 二项分布显著性水平（默认0.05）
-   * @param {number} options.momentumThreshold - 动量阈值（默认0.15）
    * @returns {Object} 杀号结果
    */
   static eliminate(analyzer, options = {}) {
     const recentPeriods = options.recentPeriods || 30;
-    const zScoreThreshold = options.zScoreThreshold || 1.5;
     const consecutiveThreshold = options.consecutiveThreshold || 3;
     const backConsecutiveThreshold = options.backConsecutiveThreshold || 2; // 后区连续阈值更低
     const overheatCount = options.overheatCount || 6;
     const backOverheatCount = options.backOverheatCount || 6; // 后区过热阈值与前区一致
-    const binomialSignificance = options.binomialSignificance || 0.05;
-    const momentumThreshold = options.momentumThreshold || 0.15;
 
     const activeData = analyzer.getActiveData();
     if (activeData.length < recentPeriods) {
@@ -53,10 +44,7 @@ export class NumberEliminator {
 
     // 执行各算法（后区使用更低的过热和连续阈值）
     const overheatResult = NumberEliminator._overheatElimination(activeData, recentPeriods, overheatCount, backOverheatCount);
-    const zScoreResult = NumberEliminator._zScoreElimination(analyzer, activeData, zScoreThreshold);
     const consecutiveResult = NumberEliminator._consecutiveElimination(activeData, consecutiveThreshold, backConsecutiveThreshold);
-    const binomialResult = NumberEliminator._binomialElimination(activeData, binomialSignificance);
-    const momentumResult = NumberEliminator._momentumElimination(analyzer, momentumThreshold);
     const repeatResult = NumberEliminator._repeatSaturationElimination(activeData);
 
     // 合并杀号结果（被任一算法杀掉的号码即被杀）
@@ -83,17 +71,11 @@ export class NumberEliminator {
     };
 
     mergeFront(overheatResult.front, '近5期过热');
-    mergeFront(zScoreResult.front, '频率Z-score偏高');
     mergeFront(consecutiveResult.front, '连续出现');
-    mergeFront(binomialResult.front, '二项分布显著偏高');
-    mergeFront(momentumResult.front, '趋势动量过强');
     mergeFront(repeatResult.front, '重号饱和');
 
     mergeBack(overheatResult.back, '近5期过热');
-    mergeBack(zScoreResult.back, '频率Z-score偏高');
     mergeBack(consecutiveResult.back, '连续出现');
-    mergeBack(binomialResult.back, '二项分布显著偏高');
-    mergeBack(momentumResult.back, '趋势动量过强');
     mergeBack(repeatResult.back, '重号饱和');
 
     // 计算保留号码（杀号后的剩余号码池）
@@ -140,10 +122,7 @@ export class NumberEliminator {
     // 算法详情描述
     const algorithmDetails = [
       { name: '近N期过热杀号', description: `近${recentPeriods}期出现≥${overheatCount}次的号码，过热后热度会下降`, frontCount: overheatResult.front.length, backCount: overheatResult.back.length },
-      { name: 'Z-score频率偏离杀号', description: `频率标准化偏离值>${zScoreThreshold}，统计显著过热`, frontCount: zScoreResult.front.length, backCount: zScoreResult.back.length },
       { name: '连续出现杀号', description: `前区连续${consecutiveThreshold}+期/后区连续${backConsecutiveThreshold}+期出现的号码，趋势过强会回落`, frontCount: consecutiveResult.front.length, backCount: consecutiveResult.back.length },
-      { name: '二项分布显著性检验', description: `出现概率显著高于理论期望值（p<${binomialSignificance}）`, frontCount: binomialResult.front.length, backCount: binomialResult.back.length },
-      { name: '趋势动量杀号', description: `近期频率上升动量>${momentumThreshold}，过强上升预示回落`, frontCount: momentumResult.front.length, backCount: momentumResult.back.length },
       { name: '重号饱和杀号', description: '近期重号率过高时杀掉上一期号码，降低重号冲突', frontCount: repeatResult.front.length, backCount: repeatResult.back.length },
     ];
 
@@ -159,10 +138,7 @@ export class NumberEliminator {
       algorithmDetails,
       rawResults: {
         overheat: overheatResult,
-        zScore: zScoreResult,
         consecutive: consecutiveResult,
-        binomial: binomialResult,
-        momentum: momentumResult,
         repeat: repeatResult
       }
     };
@@ -200,69 +176,7 @@ export class NumberEliminator {
   }
 
   /**
-   * 算法2：Z-score频率偏离杀号
-   * 计算每个号码出现频率的Z-score(标准化偏离值)
-   * Z-score = (实际频率 - 平均频率) / 标准差
-   * Z-score > threshold 的号码视为统计显著过热
-   */
-  static _zScoreElimination(analyzer, activeData, threshold = 1.5) {
-    const totalDraws = activeData.length;
-    if (totalDraws === 0) return { front: [], back: [] };
-
-    // 前区理论期望频率：每期选5个号，每个号概率 = 5/35
-    const frontExpectedRate = CONFIG.FRONT_COUNT / CONFIG.FRONT_RANGE;
-    // 后区理论期望频率：每期选2个号，每个号概率 = 2/12
-    const backExpectedRate = CONFIG.BACK_COUNT / CONFIG.BACK_RANGE;
-
-    // 计算实际频率
-    const frontFreq = {};
-    const backFreq = {};
-    for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) frontFreq[i] = 0;
-    for (let i = 1; i <= CONFIG.BACK_RANGE; i++) backFreq[i] = 0;
-
-    for (const draw of activeData) {
-      for (const num of draw.front) frontFreq[num]++;
-      for (const num of draw.back) backFreq[num]++;
-    }
-
-    // 转为频率
-    const frontRates = {};
-    const backRates = {};
-    for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) frontRates[i] = frontFreq[i] / totalDraws;
-    for (let i = 1; i <= CONFIG.BACK_RANGE; i++) backRates[i] = backFreq[i] / totalDraws;
-
-    // 计算平均值和标准差
-    const frontMean = Object.values(frontRates).reduce((a, b) => a + b, 0) / CONFIG.FRONT_RANGE;
-    const frontStd = Math.sqrt(Object.values(frontRates).reduce((s, r) => s + Math.pow(r - frontMean, 2), 0) / CONFIG.FRONT_RANGE);
-    const backMean = Object.values(backRates).reduce((a, b) => a + b, 0) / CONFIG.BACK_RANGE;
-    const backStd = Math.sqrt(Object.values(backRates).reduce((s, r) => s + Math.pow(r - backMean, 2), 0) / CONFIG.BACK_RANGE);
-
-    // 计算Z-score并筛选
-    const frontEliminated = [];
-    const frontZScores = {};
-    for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) {
-      const zScore = frontStd > 0 ? (frontRates[i] - frontMean) / frontStd : 0;
-      frontZScores[i] = zScore;
-      if (zScore > threshold) frontEliminated.push(i);
-    }
-
-    const backEliminated = [];
-    const backZScores = {};
-    for (let i = 1; i <= CONFIG.BACK_RANGE; i++) {
-      const zScore = backStd > 0 ? (backRates[i] - backMean) / backStd : 0;
-      backZScores[i] = zScore;
-      if (zScore > threshold) backEliminated.push(i);
-    }
-
-    return { 
-      front: frontEliminated.sort((a, b) => a - b), 
-      back: backEliminated.sort((a, b) => a - b),
-      details: { frontZScores, backZScores, frontMean, frontStd, backMean, backStd }
-    };
-  }
-
-  /**
-   * 算法3：连续出现杀号
+   * 算法2：连续出现杀号
    * 号码在连续threshold+期中出现，认为趋势过强
    * 后区由于号码少(12个)，更容易连续出现，使用更低阈值(backThreshold)
    */
@@ -303,144 +217,7 @@ export class NumberEliminator {
   }
 
   /**
-   * 算法4：二项分布显著性检验
-   * 对于每个号码，假设其出现概率为理论期望概率p
-   * 检验：在N期中出现次数k，是否显著高于期望
-   * 使用累积二项分布计算P(X>=k)，如果P < significance_level，则显著过热
-   * 
-   * 二项分布：P(X=k) = C(n,k) * p^k * (1-p)^{n-k}
-   * 累积：P(X>=k) = 1 - P(X<k) = sum from k to n of P(X=i)
-   */
-  static _binomialElimination(activeData, significance = 0.05) {
-    const totalDraws = activeData.length;
-    if (totalDraws < 10) return { front: [], back: [] };
-
-    // 前区理论概率：每个号每期出现概率 = 5/35 ≈ 0.143
-    const frontP = CONFIG.FRONT_COUNT / CONFIG.FRONT_RANGE;
-    // 后区理论概率：每个号每期出现概率 = 2/12 ≈ 0.167
-    const backP = CONFIG.BACK_COUNT / CONFIG.BACK_RANGE;
-
-    // 统计实际出现次数
-    const frontFreq = {};
-    const backFreq = {};
-    for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) frontFreq[i] = 0;
-    for (let i = 1; i <= CONFIG.BACK_RANGE; i++) backFreq[i] = 0;
-
-    for (const draw of activeData) {
-      for (const num of draw.front) frontFreq[num]++;
-      for (const num of draw.back) backFreq[num]++;
-    }
-
-    const frontEliminated = [];
-    const frontPValues = {};
-    for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) {
-      const k = frontFreq[i];
-      const pValue = NumberEliminator._binomialCDF(totalDraws, k, frontP);
-      frontPValues[i] = pValue;
-      if (pValue < significance && k > frontP * totalDraws) {
-        frontEliminated.push(i);
-      }
-    }
-
-    const backEliminated = [];
-    const backPValues = {};
-    for (let i = 1; i <= CONFIG.BACK_RANGE; i++) {
-      const k = backFreq[i];
-      const pValue = NumberEliminator._binomialCDF(totalDraws, k, backP);
-      backPValues[i] = pValue;
-      if (pValue < significance && k > backP * totalDraws) {
-        backEliminated.push(i);
-      }
-    }
-
-    return {
-      front: frontEliminated.sort((a, b) => a - b),
-      back: backEliminated.sort((a, b) => a - b),
-      details: { frontPValues, backPValues, frontP, backP, totalDraws }
-    };
-  }
-
-  /**
-   * 计算累积二项分布 P(X >= k)
-   * 即在n次试验中，成功次数>=k的概率
-   * @param {number} n - 总试验次数
-   * @param {number} k - 目标成功次数
-   * @param {number} p - 单次成功概率
-   * @returns {number} 累积概率
-   */
-  static _binomialCDF(n, k, p) {
-    if (k > n) return 0;
-    if (k <= 0) return 1;
-
-    // P(X>=k) = 1 - P(X<k) = 1 - sum(P(X=i) for i=0 to k-1)
-    let cumulative = 0;
-    for (let i = 0; i < k; i++) {
-      cumulative += NumberEliminator._binomialPMF(n, i, p);
-    }
-    return 1 - cumulative;
-  }
-
-  /**
-   * 计算二项分布单点概率 P(X = k)
-   * P(X=k) = C(n,k) * p^k * (1-p)^{n-k}
-   */
-  static _binomialPMF(n, k, p) {
-    if (k < 0 || k > n) return 0;
-    
-    // 使用log避免大数溢出
-    const logC = NumberEliminator._logCombination(n, k);
-    const logP = k * Math.log(p) + (n - k) * Math.log(1 - p);
-    return Math.exp(logC + logP);
-  }
-
-  /**
-   * 计算log(C(n,k))，避免大数溢出
-   */
-  static _logCombination(n, k) {
-    if (k > n - k) k = n - k; // 利用对称性减少计算
-    let result = 0;
-    for (let i = 0; i < k; i++) {
-      result += Math.log(n - i) - Math.log(i + 1);
-    }
-    return result;
-  }
-
-  /**
-   * 算法5：趋势动量杀号
-   * 利用FrequencyAnalyzer的analyzeRecentFrequency计算的动量值
-   * 动量正值过大表示近期频率上升趋势过强，预示回落
-   */
-  static _momentumElimination(analyzer, threshold = 0.15) {
-    try {
-      const recentFreq = analyzer.frequencyAnalyzer.analyzeRecentFrequency(15);
-      const frontEliminated = [];
-      const backEliminated = [];
-
-      for (let i = 1; i <= CONFIG.FRONT_RANGE; i++) {
-        if (recentFreq.frontMomentum[i] > threshold) {
-          frontEliminated.push(i);
-        }
-      }
-
-      for (let i = 1; i <= CONFIG.BACK_RANGE; i++) {
-        if (recentFreq.backMomentum[i] > threshold) {
-          backEliminated.push(i);
-        }
-      }
-
-      return {
-        front: frontEliminated.sort((a, b) => a - b),
-        back: backEliminated.sort((a, b) => a - b),
-        details: { frontMomentum: recentFreq.frontMomentum, backMomentum: recentFreq.backMomentum }
-      };
-    } catch (e) {
-      console.warn('趋势动量杀号计算失败:', e);
-      return { front: [], back: [] };
-    }
-  }
-
-  /**
-   * 算法6：重号饱和杀号
+   * 算法3：重号饱和杀号
    * 分析近5期的重号率（与上一期相同的号码比例）
    * 前区重号率过高（>40%）时杀掉上一期前区号码
    * 后区重号率过高（>60%）时杀掉上一期后区号码（后区号码少，阈值更高）
@@ -532,13 +309,20 @@ export class NumberEliminator {
    * 注数 = C(X,5) × C(Y,2)，费用 = 注数 × 2元
    */
   static FUSHI_PLANS = [
+    // 小型套餐（前区≤6，绿色系）
     { key: '5+3', frontPool: 5, backPool: 3, label: '5+3套餐' },
     { key: '6+2', frontPool: 6, backPool: 2, label: '6+2套餐' },
     { key: '6+3', frontPool: 6, backPool: 3, label: '6+3套餐' },
+    // 中型套餐（前区=7，蓝色系）
     { key: '7+2', frontPool: 7, backPool: 2, label: '7+2套餐' },
     { key: '7+3', frontPool: 7, backPool: 3, label: '7+3套餐' },
+    // 大型套餐（前区≥8，橙红色系）
     { key: '8+2', frontPool: 8, backPool: 2, label: '8+2套餐' },
     { key: '8+3', frontPool: 8, backPool: 3, label: '8+3套餐' },
+    { key: '8+5', frontPool: 8, backPool: 5, label: '8+5套餐' },
+    { key: '9+5', frontPool: 9, backPool: 5, label: '9+5套餐' },
+    { key: '10+5', frontPool: 10, backPool: 5, label: '10+5套餐' },
+    { key: '15+5', frontPool: 15, backPool: 5, label: '15+5套餐' },
   ];
 
   /**

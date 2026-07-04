@@ -5,7 +5,6 @@
 
 import { CONFIG } from '../core/Config.js';
 import { computeZone4Prediction, formatZonePredictionLog, getBackZone4 } from './ZonePrediction.js';
-import { goldenRegressionBonus, fibonacciRhythmBonus, FIB_BACK, moderateOmissionRecovery, recentAppearanceBonus } from './GoldenFibonacci.js';
 
 export class BackDanOptimizer {
   /**
@@ -175,18 +174,17 @@ export class BackDanOptimizer {
           omissionDevRaw += strategyBonus;
         }
       }
-      // 黄金回归子信号：后区遗漏≈0.618×avg或≈1.618×avg时回归概率显著提升
-      const goldenBonus = goldenRegressionBonus(currentOmission, avgBackOmission, omissionStd);
-      omissionDevRaw += goldenBonus;
-      // 斐波那契节奏子信号：后区遗漏=斐波那契数{1,2,3,5,8}时处于自然节奏回归点
-      const fibRhythm = fibonacciRhythmBonus(currentOmission);
-      omissionDevRaw += fibRhythm;
-      // 回测O3新增：中间地带回升 - 遗漏比率0.7-1.3的号码得分极低
-      const moderateBonus = moderateOmissionRecovery(currentOmission, avgBackOmission);
-      omissionDevRaw += moderateBonus;
-      // 回测O3新增：低遗漏近期加分 - 近期频繁出现号码也需加分
-      const recentBonus = recentAppearanceBonus(currentOmission, avgBackOmission);
-      omissionDevRaw += recentBonus;
+      // 中间地带回升：遗漏比率0.7-1.3的号码有基础回升分
+      if (avgBackOmission > 0) {
+        const ratio = currentOmission / avgBackOmission;
+        if (ratio >= 0.7 && ratio <= 1.3) {
+          const closeness = 1 - Math.abs(ratio - 1.0) / 0.3;
+          omissionDevRaw += closeness * 4;
+        }
+        // 低遗漏近期加分
+        if (ratio <= 0.5) omissionDevRaw += 3;
+        else if (ratio <= 0.7) omissionDevRaw += 2;
+      }
       score += omissionDevRaw * dm.omissionDeviation;
             
       // 维度3: 频率+动量得分（dm.freqMomentum乘数控制）
@@ -249,9 +247,6 @@ export class BackDanOptimizer {
         const penalty = Math.min(coolingDegree * freqHeat * 2, maxPenalty);
         score -= penalty * (dm.coolingPenalty || 0);
       }
-
-      // 斐波那契号码结构加分：后区斐波那契数{1,2,3,5,8}出现频率有统计规律
-      if (FIB_BACK.includes(num)) score += 0.5;
 
       // 维度9: 和值趋势回归（近期后区和值偏离→号码值反向加分）
       const backSumMax = strategy === 'hot' ? 5 : strategy === 'balanced' ? 6 : 5;

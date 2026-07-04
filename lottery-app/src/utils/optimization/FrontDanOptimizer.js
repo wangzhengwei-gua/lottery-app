@@ -1,19 +1,18 @@
 import { CONFIG } from '../core/Config.js';
 import { computeZone5Prediction, formatZonePredictionLog, getZone5, getZone7 } from './ZonePrediction.js';
-import { goldenRegressionBonus, fibonacciRhythmBonus, goldenSumTarget, fibonacciPresenceScore, fibonacciSumBonus, moderateOmissionRecovery, recentAppearanceBonus } from './GoldenFibonacci.js';
 
 export class FrontDanOptimizer {
   /**
-   * 优化前区胆码推荐（P1精简：5维度评分 + 黄金/斐波那契增强 + 加权随机采样）
+   * 优化前区胆码推荐（5维度评分 + 和值回归 + 加权随机采样）
    * 热号：heatSignal + zone5Trend + repeatCooling + momentum + sumRegression
-   * 均衡/保守：freqMomentum + conditionalProb + omissionDeviation(+黄金回归+斐波那契节奏) + zone5Trend + sumRegression
+   * 均衡/保守：freqMomentum + conditionalProb + omissionDeviation + zone5Trend + sumRegression
    * @param {Object} analyzer - LotteryAnalyzer实例
    * @param {number} danCount - 需要推荐的胆码数量（2-4）
    * @param {string} strategy - 策略：hot/balanced/conservative
    * @returns {Object} { selected: number[], probabilityInfo: Object[] }
    */
   static optimize(analyzer, danCount = 3, strategy = 'hot', dimensionMultipliers = null) {
-    console.log('🎯 前区胆码智能推荐（5维度评分 + 黄金/斐波那契增强 + 和值回归）');
+    console.log('🎯 前区胆码智能推荐（5维度评分 + 和值回归）');
     console.log('  策略:', strategy, '胆码数量:', danCount);
     
     // P1维度精简：从12维度→5维度，删除噪音/重叠维度
@@ -133,9 +132,6 @@ export class FrontDanOptimizer {
           score += mustBonus;
           dims.zone5Trend += mustBonus;
         }
-        // 热号策略：斐波那契号码结构加分（斐波那契数{1,2,3,5,8,13,21,34}在热号中出现频率偏高）
-        const FIB_FRONT = [1, 2, 3, 5, 8, 13, 21, 34];
-        if (FIB_FRONT.includes(num)) score += 1 * dm.heatSignal;
         
         // 维度3: 胆码重号降温 × dm.repeatCooling（回测O1条件化：仅近期重号率>2.5时惩罚）
         // 回测根因：#19遗漏=0实际连出(重号)，但冷却惩罚过度扣分导致排名偏低
@@ -221,24 +217,19 @@ export class FrontDanOptimizer {
             omissionDevRaw += strategy === 'balanced' ? 3 : 5;
           }
         }
-        // 黄金回归子信号：遗漏≈0.618×avg(浅回归)或≈1.618×avg(深回归)时自然回归概率高
-        const goldenBonus = goldenRegressionBonus(currentOmission, avgFrontOmission, omissionStd);
-        omissionDevRaw += goldenBonus;
-        // 斐波那契节奏子信号：遗漏=斐波那契数(1,2,3,5,8,13)时处于自然节奏回归点
-        const fibRhythmBonus = fibonacciRhythmBonus(currentOmission);
-        omissionDevRaw += fibRhythmBonus;
-        // 回测O1新增：中间地带回升 - 遗漏比率0.7-1.3的号码得分极低，但30%开奖号来自此区间
-        const moderateBonus = moderateOmissionRecovery(currentOmission, avgFrontOmission);
-        omissionDevRaw += moderateBonus;
-        // 回测O1新增：低遗漏近期加分 - 均衡/保守策略不奖励低遗漏号，但40-50%开奖号来自此区间
-        const recentBonus = recentAppearanceBonus(currentOmission, avgFrontOmission);
-        omissionDevRaw += recentBonus;
+        // 中间地带回升：遗漏比率0.7-1.3的号码有基础回升分
+        if (avgFrontOmission > 0) {
+          const ratio = currentOmission / avgFrontOmission;
+          if (ratio >= 0.7 && ratio <= 1.3) {
+            const closeness = 1 - Math.abs(ratio - 1.0) / 0.3;
+            omissionDevRaw += closeness * 4;
+          }
+          // 低遗漏近期加分：遗漏≤0.5×avg的“持续热度”号码
+          if (ratio <= 0.5) omissionDevRaw += 2;
+          else if (ratio <= 0.7) omissionDevRaw += 1;
+        }
         score += omissionDevRaw * dm.omissionDeviation;
         dims.omissionDeviation = omissionDevRaw * dm.omissionDeviation;
-        dims.goldenRegression = goldenBonus * dm.omissionDeviation;
-        dims.fibRhythm = fibRhythmBonus * dm.omissionDeviation;
-        dims.moderateRecovery = moderateBonus * dm.omissionDeviation;
-        dims.recentAppearance = recentBonus * dm.omissionDeviation;
         
         // 维度4: 5小区动态趋势 × dm.zone5Trend
         const zone5 = getZone5(num);
@@ -351,19 +342,15 @@ export class FrontDanOptimizer {
         const individualSum = combo.reduce((s, c) => s + c.score, 0);
         
         const comboSum = combo.reduce((s, c) => s + c.number, 0);
-        // 黄金分割和值目标：φ区间[72-108]，理想中心90
-        // 替代经验值55-90/72，有数学依据的黄金区间
-        const goldenTarget = goldenSumTarget(15, 165);
+        // 和值目标：经验区间[72-108]，理想中心90
         let sumBonus = 0;
-        if (comboSum >= goldenTarget.lower && comboSum <= goldenTarget.upper) {
-          sumBonus = 5 - Math.abs(comboSum - goldenTarget.ideal) * 0.1;
-        } else if (comboSum >= goldenTarget.lower - 10 && comboSum <= goldenTarget.upper + 10) {
+        if (comboSum >= 72 && comboSum <= 108) {
+          sumBonus = 5 - Math.abs(comboSum - 90) * 0.1;
+        } else if (comboSum >= 62 && comboSum <= 118) {
           sumBonus = 1;
         } else {
           sumBonus = -3;
         }
-        // 斐波那契和值加分：组合和值等于55或89(斐波那契数)时给予额外加分
-        sumBonus += fibonacciSumBonus(comboSum, [55, 89]);
         
         const diffs = [];
         for (let a = 0; a < combo.length; a++) {
@@ -385,14 +372,12 @@ export class FrontDanOptimizer {
         const lowOmissionCount = combo.filter(c => c.omission <= 5).length;
         if (lowOmissionCount === 4) omissionPenalty -= 2;
         
-        // 斐波那契号码结构评分：1-2个斐波那契数=统计期望范围(+1)，0个=结构缺失(-1)
-        const fibPresence = fibonacciPresenceScore(combo.map(c => c.number), 'front');
-        const groupScore = individualSum + sumBonus + acBonus + spreadBonus + omissionPenalty + fibPresence.score;
+        const groupScore = individualSum + sumBonus + acBonus + spreadBonus + omissionPenalty;
         
         if (groupScore > bestGroupScore) {
           bestGroupScore = groupScore;
           bestCombo = combo;
-          bestBreakdown = { individualSum, sumBonus, acBonus, spreadBonus, omissionPenalty, fibPresence: fibPresence.score, fibCount: fibPresence.fibCount, comboSum, acValue, zonesCovered };
+          bestBreakdown = { individualSum, sumBonus, acBonus, spreadBonus, omissionPenalty, comboSum, acValue, zonesCovered };
         }
       }
       
@@ -419,7 +404,7 @@ export class FrontDanOptimizer {
       }
       
       if (bestBreakdown) {
-        console.log(`  🧩 群体优化(V6+黄金): 和值${bestBreakdown.comboSum}(适配+${bestBreakdown.sumBonus.toFixed(1)}分) AC=${bestBreakdown.acValue}(加+${bestBreakdown.acBonus}分) 区间覆盖${bestBreakdown.zonesCovered}(加+${bestBreakdown.spreadBonus}分) 遗漏惩罚${bestBreakdown.omissionPenalty} 斐波那契${bestBreakdown.fibCount}个(加+${bestBreakdown.fibPresence}分) 个体总分${bestBreakdown.individualSum.toFixed(1)} 群体总分${bestGroupScore.toFixed(1)}`);
+        console.log(`  🧩 群体优化: 和值${bestBreakdown.comboSum}(适配+${bestBreakdown.sumBonus.toFixed(1)}分) AC=${bestBreakdown.acValue}(加+${bestBreakdown.acBonus}分) 区间覆盖${bestBreakdown.zonesCovered}(加+${bestBreakdown.spreadBonus}分) 遗漏惩罚${bestBreakdown.omissionPenalty} 个体总分${bestBreakdown.individualSum.toFixed(1)} 群体总分${bestGroupScore.toFixed(1)}`);
       }
     } else {
       // 均衡/保守策略：基于7小区动态频率占比采样
@@ -580,16 +565,12 @@ export class FrontDanOptimizer {
       }).join(', '));
     } else {
       const top5Scored = scored.slice(0, 5);
-      console.log('  📊 维度分解(均衡/保守+黄金):', top5Scored.map(s => {
+      console.log('  📊 维度分解(均衡/保守):', top5Scored.map(s => {
         const d = s.dims || {};
         const parts = [];
         if (d.freqMomentum) parts.push(`频动${d.freqMomentum.toFixed(1)}`);
         if (d.conditionalProb) parts.push(`条件${d.conditionalProb.toFixed(1)}`);
         if (d.omissionDeviation) parts.push(`遗漏${d.omissionDeviation.toFixed(1)}`);
-        if (d.goldenRegression) parts.push(`黄金${d.goldenRegression.toFixed(1)}`);
-        if (d.fibRhythm) parts.push(`斐${d.fibRhythm.toFixed(1)}`);
-        if (d.moderateRecovery) parts.push(`中间${d.moderateRecovery.toFixed(1)}`);
-        if (d.recentAppearance) parts.push(`近期${d.recentAppearance.toFixed(1)}`);
         if (d.zone5Trend) parts.push(`区趋${d.zone5Trend.toFixed(1)}`);
         if (d.sumRegression) parts.push(`和值${d.sumRegression.toFixed(1)}`);
         return `#${s.number}(${parts.join('+')})`;

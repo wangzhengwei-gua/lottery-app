@@ -4803,3 +4803,47 @@ button.success {
     color: #333 !important;
   }
 }
+
+/* ============ 玩法区标签页样式 ============ */
+.play-mode-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #e0e0e0;
+  overflow-x: auto;
+}
+
+.play-mode-tab {
+  flex: 1;
+  min-width: 80px;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  font-size: 1em;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+}
+
+.play-mode-tab:hover {
+  color: #d4af37;
+  background: rgba(212, 175, 55, 0.06);
+}
+
+.play-mode-tab.active {
+  color: #d4af37;
+  border-bottom-color: #d4af37;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .play-mode-tab {
+    padding: 10px 8px;
+    font-size: 0.9em;
+    min-width: 60px;
+  }
+}
