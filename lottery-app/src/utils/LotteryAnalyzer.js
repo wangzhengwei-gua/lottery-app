@@ -26,6 +26,7 @@ import { OmissionAnalysisModel } from './algorithms/OmissionAnalysis.js';
 import { NormalDistributionModel } from './algorithms/NormalDistribution.js';
 import { NumberEliminator } from './optimization/NumberEliminator.js';
 import { StructuralEliminator } from './optimization/StructuralEliminator.js';
+import { FushiSelector } from './optimization/FushiSelector.js';
 
 class LotteryAnalyzer {
   constructor() {
@@ -1617,6 +1618,136 @@ class LotteryAnalyzer {
       randomTuoExpect,
       randomBackExpect,
       totalPeriods: results.length
+    };
+  }
+
+  /**
+   * 复式玩法端到端回测 - 杀号+选号→对比开奖号，验证号码池真实覆盖率
+   * @param {Object} options
+   * @param {Object} options.plan - 套餐配置 { key, frontPool, backPool }
+   * @param {string} options.mode - 杀号模式 basic/structural/mixed_intersect
+   * @param {string} options.strategy - 选号策略 hot/balanced/conservative
+   * @param {Object} options.basicOptions - 基础杀号参数
+   * @param {Object} options.structuralOptions - 结构杀号参数
+   * @param {number} options.backtestPeriods - 回测期数（默认20）
+   * @returns {Object} 回测结果
+   */
+  backtestFushiSelect(options = {}) {
+    const plan = options.plan || { key: '8+3', frontPool: 8, backPool: 3 };
+    const mode = options.mode || 'mixed_intersect';
+    const strategy = options.strategy || 'balanced';
+    const periods = options.backtestPeriods || 20;
+    const basicOpts = options.basicOptions || { recentPeriods: 30, overheatCount: 6, backOverheatCount: 6, consecutiveThreshold: 3, backConsecutiveThreshold: 2 };
+    const structuralOpts = options.structuralOptions || { zoneBreakEnabled: true, sumMin: 65, sumMax: 115, tailKillEnabled: true };
+
+    const activeData = this.getActiveData();
+    if (activeData.length < periods + 30) {
+      return { success: false, summary: `历史数据不足（需要${periods + 30}期，当前${activeData.length}期）`, details: [] };
+    }
+
+    const results = [];
+    const testStart = activeData.length - periods;
+    console.log(`🔬 复式选号回测开始：${plan.key}套餐，${mode}模式，${strategy}策略，共${periods}期`);
+
+    for (let i = testStart; i < activeData.length; i++) {
+      const actualDraw = activeData[i];
+      const trainData = activeData.slice(0, i);
+      if (trainData.length < 30) continue;
+
+      // 重建临时 analyzer（完整初始化，支持 FushiSelector）
+      const trainDataStr = trainData.map(d => d.full.join(' ')).join('\n');
+      const tempAnalyzer = new LotteryAnalyzer();
+      tempAnalyzer.loadHistoryData(trainDataStr, '复式回测训练数据');
+
+      // 1. 杀号
+      let elimResult;
+      try {
+        if (mode === 'basic') elimResult = NumberEliminator.eliminate(tempAnalyzer, basicOpts);
+        else if (mode === 'structural') elimResult = StructuralEliminator.eliminate(tempAnalyzer, structuralOpts);
+        else elimResult = StructuralEliminator.mixedEliminate(tempAnalyzer, { basicOptions: basicOpts, structuralOptions: structuralOpts });
+      } catch (e) { console.warn(`第${i + 1}期杀号失败:`, e.message); continue; }
+
+      const frontRemaining = elimResult.frontRemaining;
+      const backRemaining = elimResult.backRemaining;
+
+      // 剩余号码不足套餐需求，跳过
+      if (frontRemaining.length < plan.frontPool || backRemaining.length < plan.backPool) {
+        console.warn(`第${i + 1}期剩余号码不足(前${frontRemaining.length}/后${backRemaining.length})，跳过`);
+        continue;
+      }
+
+      // 2. 选号（FushiSelector 群体组合优化）
+      let frontSelected = [];
+      let backSelected = [];
+      try {
+        const sel = FushiSelector.select(tempAnalyzer, frontRemaining, backRemaining, plan, strategy);
+        frontSelected = sel.frontSelected;
+        backSelected = sel.backSelected;
+      } catch (e) {
+        console.error(`第${i + 1}期选号失败:`, e.message, e.stack);
+        continue;
+      }
+
+      // 3. 对比开奖号
+      const frontHits = actualDraw.front.filter(n => frontSelected.includes(n)).length;
+      const backHits = actualDraw.back.filter(n => backSelected.includes(n)).length;
+      const frontWrongKill = actualDraw.front.filter(n => elimResult.frontEliminated.includes(n)).length;
+      const backWrongKill = actualDraw.back.filter(n => elimResult.backEliminated.includes(n)).length;
+
+      console.log(`  第${i + 1}期: 开奖[${actualDraw.front.join(',')}+${actualDraw.back.join(',')}] 前区命中${frontHits}/5 后区${backHits}/2 误杀${frontWrongKill}个`);
+
+      results.push({
+        periodIndex: i + 1,
+        actualDraw: { front: actualDraw.front, back: actualDraw.back },
+        frontSelected, backSelected,
+        frontHits, backHits,
+        frontWrongKill, backWrongKill,
+        frontHitRate: frontHits / CONFIG.FRONT_COUNT,
+        backHitRate: backHits / CONFIG.BACK_COUNT,
+      });
+    }
+
+    if (results.length === 0) {
+      console.error('❌ 复式选号回测无有效结果：所有期都被跳过（检查上方warn/error日志）');
+      return { success: false, summary: '回测无有效结果（所有期均失败，请查看控制台错误日志）', details: [] };
+    }
+
+    // 汇总统计
+    const avgFrontHits = results.reduce((a, r) => a + r.frontHits, 0) / results.length;
+    const avgBackHits = results.reduce((a, r) => a + r.backHits, 0) / results.length;
+    const avgFrontHitRate = avgFrontHits / CONFIG.FRONT_COUNT;
+    const avgBackHitRate = avgBackHits / CONFIG.BACK_COUNT;
+    const frontAllHitRate = results.filter(r => r.frontHits === CONFIG.FRONT_COUNT).length / results.length;
+    const backAllHitRate = results.filter(r => r.backHits === CONFIG.BACK_COUNT).length / results.length;
+    const avgFrontWrongKill = results.reduce((a, r) => a + r.frontWrongKill, 0) / results.length;
+    const avgBackWrongKill = results.reduce((a, r) => a + r.backWrongKill, 0) / results.length;
+
+    // 随机基线：从35个号随机选frontPool个，期望命中 5*frontPool/35
+    const randomFrontExpect = CONFIG.FRONT_COUNT * plan.frontPool / CONFIG.FRONT_RANGE;
+    const randomBackExpect = CONFIG.BACK_COUNT * plan.backPool / CONFIG.BACK_RANGE;
+
+    const modeNames = { basic: '基础杀号', structural: '结构杀号', mixed_intersect: '混合杀号(交集)' };
+    const summary = `${plan.key}套餐回测${results.length}期（${modeNames[mode]}+${strategy}策略）：` +
+      `前区号码池命中${avgFrontHits.toFixed(2)}/5（命中率${(avgFrontHitRate * 100).toFixed(1)}%，随机基线${randomFrontExpect.toFixed(2)}/5），` +
+      `后区命中${avgBackHits.toFixed(2)}/2（命中率${(avgBackHitRate * 100).toFixed(1)}%，随机基线${randomBackExpect.toFixed(2)}/2），` +
+      `前区全中率${(frontAllHitRate * 100).toFixed(1)}%，误杀${avgFrontWrongKill.toFixed(2)}个/期`;
+
+    console.log(`✅ 复式选号回测完成（${results.length}期）`);
+    console.log(`  📊 ${summary}`);
+    console.log(`  前区池命中: ${avgFrontHits.toFixed(2)}/5 (随机${randomFrontExpect.toFixed(2)}) | 增益=${(avgFrontHits / randomFrontExpect).toFixed(2)}x`);
+    console.log(`  后区池命中: ${avgBackHits.toFixed(2)}/2 (随机${randomBackExpect.toFixed(2)}) | 增益=${(avgBackHits / randomBackExpect).toFixed(2)}x`);
+    console.log(`  前区全中率: ${(frontAllHitRate * 100).toFixed(1)}% | 后区全中率: ${(backAllHitRate * 100).toFixed(1)}%`);
+
+    return {
+      success: true,
+      mode, strategy, plan,
+      summary, details: results,
+      avgFrontHits, avgBackHits,
+      avgFrontHitRate, avgBackHitRate,
+      frontAllHitRate, backAllHitRate,
+      avgFrontWrongKill, avgBackWrongKill,
+      randomFrontExpect, randomBackExpect,
+      totalPeriods: results.length,
     };
   }
 

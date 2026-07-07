@@ -9,6 +9,7 @@
 
 import { CONFIG } from '../core/Config.js';
 import { safeDivide } from '../core/Utils.js';
+import { UnifiedScorer } from './UnifiedScorer.js';
 
 export class NumberEliminator {
 
@@ -89,10 +90,23 @@ export class NumberEliminator {
     const minBackRemaining = CONFIG.BACK_COUNT + 1;
 
     // 如果杀号过多，按杀号原因数量排序恢复（仅被1个算法杀的优先恢复）
+    // 改进：同原因数下结合 UnifiedScorer 评分，优先恢复高分号码，减少误杀好号
     if (frontRemaining.length < minFrontRemaining) {
       const needRestore = minFrontRemaining - frontRemaining.length;
+      let frontScoreMap = null;
+      try {
+        frontScoreMap = UnifiedScorer.score(analyzer, 'front', 'balanced')
+          .reduce((m, r) => { m[r.number] = r.totalScore; return m; }, {});
+      } catch (e) { frontScoreMap = null; }
       const eliminatedFront = [...frontEliminatedSet]
-        .sort((a, b) => (reasons[a] || []).length - (reasons[b] || []).length);
+        .sort((a, b) => {
+          const ra = (reasons[a] || []).length;
+          const rb = (reasons[b] || []).length;
+          if (ra !== rb) return ra - rb; // 原因少优先恢复
+          const sa = frontScoreMap ? (frontScoreMap[a] || 0) : 0;
+          const sb = frontScoreMap ? (frontScoreMap[b] || 0) : 0;
+          return sb - sa; // 同原因数下高分优先恢复
+        });
       for (let i = 0; i < needRestore && i < eliminatedFront.length; i++) {
         frontEliminatedSet.delete(eliminatedFront[i]);
         delete reasons[eliminatedFront[i]];
@@ -105,8 +119,20 @@ export class NumberEliminator {
 
     if (backRemaining.length < minBackRemaining) {
       const needRestore = minBackRemaining - backRemaining.length;
+      let backScoreMap = null;
+      try {
+        backScoreMap = UnifiedScorer.score(analyzer, 'back', 'balanced')
+          .reduce((m, r) => { m[r.number] = r.totalScore; return m; }, {});
+      } catch (e) { backScoreMap = null; }
       const eliminatedBack = [...backEliminatedSet]
-        .sort((a, b) => (reasons[a] || []).length - (reasons[b] || []).length);
+        .sort((a, b) => {
+          const ra = (reasons[a] || []).length;
+          const rb = (reasons[b] || []).length;
+          if (ra !== rb) return ra - rb;
+          const sa = backScoreMap ? (backScoreMap[a] || 0) : 0;
+          const sb = backScoreMap ? (backScoreMap[b] || 0) : 0;
+          return sb - sa;
+        });
       for (let i = 0; i < needRestore && i < eliminatedBack.length; i++) {
         backEliminatedSet.delete(eliminatedBack[i]);
         delete reasons[eliminatedBack[i]];
@@ -421,10 +447,25 @@ export class NumberEliminator {
       throw new Error(`后区号码不足：需要${backCount}个，仅有${backNumbers.length}个`);
     }
 
-    // 只计算注数，不再枚举全量组合（避免内存浪费）
+    // 计算注数
     const frontCombinationsCount = NumberEliminator._comb(frontNumbers.length, frontCount);
     const backCombinationsCount = NumberEliminator._comb(backNumbers.length, backCount);
     const totalBets = frontCombinationsCount * backCombinationsCount;
+
+    // 小套餐（≤500注）自动生成组合明细供查看/导出，大套餐省略避免内存浪费
+    let combinations = null;
+    if (totalBets <= 500) {
+      const sortedFront = [...frontNumbers].sort((a, b) => a - b);
+      const sortedBack = [...backNumbers].sort((a, b) => a - b);
+      const frontCombos = NumberEliminator._generateAllCombinations(sortedFront, frontCount);
+      const backCombos = NumberEliminator._generateAllCombinations(sortedBack, backCount);
+      combinations = [];
+      for (const fc of frontCombos) {
+        for (const bc of backCombos) {
+          combinations.push({ front: fc, back: bc });
+        }
+      }
+    }
 
     return {
       frontPool: [...frontNumbers].sort((a, b) => a - b),
@@ -435,6 +476,8 @@ export class NumberEliminator {
       backCombinations: backCombinationsCount,
       totalBets,
       cost: totalBets * 2,
+      combinations,
+      hasDetails: combinations !== null,
       generatedAt: new Date().toLocaleString('zh-CN')
     };
   }

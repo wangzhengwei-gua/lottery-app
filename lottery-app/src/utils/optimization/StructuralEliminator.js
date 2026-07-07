@@ -15,6 +15,7 @@
 import { CONFIG } from '../core/Config.js';
 import { safeDivide } from '../core/Utils.js';
 import { NumberEliminator } from './NumberEliminator.js';
+import { UnifiedScorer } from './UnifiedScorer.js';
 
 export class StructuralEliminator {
 
@@ -80,8 +81,20 @@ export class StructuralEliminator {
 
     if (frontRemaining.length < minFrontRemaining) {
       const needRestore = minFrontRemaining - frontRemaining.length;
+      let frontScoreMap = null;
+      try {
+        frontScoreMap = UnifiedScorer.score(analyzer, 'front', 'balanced')
+          .reduce((m, r) => { m[r.number] = r.totalScore; return m; }, {});
+      } catch (e) { frontScoreMap = null; }
       const eliminatedFront = [...frontEliminatedSet]
-        .sort((a, b) => (reasons[a] || []).length - (reasons[b] || []).length);
+        .sort((a, b) => {
+          const ra = (reasons[a] || []).length;
+          const rb = (reasons[b] || []).length;
+          if (ra !== rb) return ra - rb;
+          const sa = frontScoreMap ? (frontScoreMap[a] || 0) : 0;
+          const sb = frontScoreMap ? (frontScoreMap[b] || 0) : 0;
+          return sb - sa;
+        });
       for (let i = 0; i < needRestore && i < eliminatedFront.length; i++) {
         frontEliminatedSet.delete(eliminatedFront[i]);
         delete reasons[eliminatedFront[i]];
@@ -93,8 +106,20 @@ export class StructuralEliminator {
 
     if (backRemaining.length < minBackRemaining) {
       const needRestore = minBackRemaining - backRemaining.length;
+      let backScoreMap = null;
+      try {
+        backScoreMap = UnifiedScorer.score(analyzer, 'back', 'balanced')
+          .reduce((m, r) => { m[r.number] = r.totalScore; return m; }, {});
+      } catch (e) { backScoreMap = null; }
       const eliminatedBack = [...backEliminatedSet]
-        .sort((a, b) => (reasons[a] || []).length - (reasons[b] || []).length);
+        .sort((a, b) => {
+          const ra = (reasons[a] || []).length;
+          const rb = (reasons[b] || []).length;
+          if (ra !== rb) return ra - rb;
+          const sa = backScoreMap ? (backScoreMap[a] || 0) : 0;
+          const sb = backScoreMap ? (backScoreMap[b] || 0) : 0;
+          return sb - sa;
+        });
       for (let i = 0; i < needRestore && i < eliminatedBack.length; i++) {
         backEliminatedSet.delete(eliminatedBack[i]);
         delete reasons[eliminatedBack[i]];

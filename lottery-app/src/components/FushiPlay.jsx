@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { CONFIG } from '../utils/core/Config.js';
 import { NumberEliminator } from '../utils/optimization/NumberEliminator.js';
 import { UnifiedScorer } from '../utils/optimization/UnifiedScorer.js';
+import { FushiSelector } from '../utils/optimization/FushiSelector.js';
 
 export default function FushiPlay({ analyzer }) {
   // 状态
@@ -27,19 +28,24 @@ export default function FushiPlay({ analyzer }) {
   const [showDebugInfo, setShowDebugInfo] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [backtestResult, setBacktestResult] = useState(null);
+  const [fushiBacktestResult, setFushiBacktestResult] = useState(null);
+  const [fushiBacktestLoading, setFushiBacktestLoading] = useState(false);
+  const [fushiBtPlanKey, setFushiBtPlanKey] = useState('10+5');
+  const [fushiBtPeriods, setFushiBtPeriods] = useState(50);
   const [recommendResult, setRecommendResult] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
   // 手动杀号状态
   const [manualFrontKill, setManualFrontKill] = useState([]);
   const [manualBackKill, setManualBackKill] = useState([]);
 
-  // 有效剩余号码 = 算法杀号后剩余 - 手动杀号
-  const effectiveFrontRemaining = eliminationResult
-    ? eliminationResult.frontRemaining.filter(n => !manualFrontKill.includes(n))
-    : [];
-  const effectiveBackRemaining = eliminationResult
-    ? eliminationResult.backRemaining.filter(n => !manualBackKill.includes(n))
-    : [];
+  // 有效剩余号码 = 全部号码 - 算法杀号(如果执行了) - 手动杀号
+  // 不依赖算法杀号，用户可直接手动杀号
+  const allFront = Array.from({ length: CONFIG.FRONT_RANGE }, (_, i) => i + 1);
+  const allBack = Array.from({ length: CONFIG.BACK_RANGE }, (_, i) => i + 1);
+  const algoFrontKilled = eliminationResult ? eliminationResult.frontEliminated : [];
+  const algoBackKilled = eliminationResult ? eliminationResult.backEliminated : [];
+  const effectiveFrontRemaining = allFront.filter(n => !algoFrontKilled.includes(n) && !manualFrontKill.includes(n));
+  const effectiveBackRemaining = allBack.filter(n => !algoBackKilled.includes(n) && !manualBackKill.includes(n));
 
   // 手动杀号切换
   const toggleManualFrontKill = (num) => {
@@ -108,6 +114,29 @@ export default function FushiPlay({ analyzer }) {
     } catch (error) { alert('回测验证失败: ' + error.message); }
   };
 
+  // 选号命中率端到端回测（杀号+选号→对比开奖号）
+  // 固定用 mixed_intersect 模式（交集，误杀最少），与 currentMode 解耦
+  const handleFushiBacktest = (planKey) => {
+    const key = planKey || fushiBtPlanKey;
+    setFushiBacktestLoading(true);
+    const plan = NumberEliminator.FUSHI_PLANS.find(p => p.key === key) || NumberEliminator.FUSHI_PLANS[0];
+    // setTimeout 让 loading 状态先渲染（回测需重建多期 analyzer，较耗时）
+    setTimeout(() => {
+      try {
+        const result = analyzer.backtestFushiSelect({
+          plan,
+          mode: 'mixed_intersect',
+          strategy: 'balanced',
+          basicOptions: { ...eliminationOptions, backOverheatCount: eliminationOptions.backOverheatCount || 6, backConsecutiveThreshold: eliminationOptions.backConsecutiveThreshold || 2 },
+          structuralOptions,
+          backtestPeriods: fushiBtPeriods
+        });
+        setFushiBacktestResult(result);
+      } catch (error) { alert('选号命中率回测失败: ' + error.message); }
+      finally { setFushiBacktestLoading(false); }
+    }, 50);
+  };
+
   const handleRecommendMode = () => {
     try {
       const result = analyzer.recommendEliminationMode();
@@ -127,37 +156,40 @@ export default function FushiPlay({ analyzer }) {
     }
   };
 
-  // 套餐选择 - 使用UnifiedScorer统一评分选号
+  // 套餐选择 - 使用FushiSelector群体组合优化选号
   const handleSelectPlan = (plan) => {
-    if (!eliminationResult) { alert('请先执行杀号分析！'); return; }
     if (effectiveFrontRemaining.length < plan.frontPool) {
-      alert(`前区有效剩余号码不足：套餐需要${plan.frontPool}个，仅有${effectiveFrontRemaining.length}个（算法杀号+手动杀号后）。`);
+      alert(`前区有效剩余号码不足：套餐需要${plan.frontPool}个，仅有${effectiveFrontRemaining.length}个（请减少杀号数量）。`);
       return;
     }
     if (effectiveBackRemaining.length < plan.backPool) {
-      alert(`后区有效剩余号码不足：套餐需要${plan.backPool}个，仅有${effectiveBackRemaining.length}个（算法杀号+手动杀号后）。`);
+      alert(`后区有效剩余号码不足：套餐需要${plan.backPool}个，仅有${effectiveBackRemaining.length}个（请减少杀号数量）。`);
       return;
     }
     setSelectedPlan(plan);
     setFushiResult(null);
 
-    // 使用UnifiedScorer从有效剩余号码中选最优号码
+    // 使用FushiSelector群体组合优化选号（个体分40%+结构分60%）
     try {
-      const frontScored = UnifiedScorer.score(analyzer, 'front', 'balanced')
-        .filter(r => effectiveFrontRemaining.includes(r.number));
-      const frontSelected = frontScored.slice(0, plan.frontPool).map(r => r.number).sort((a, b) => a - b);
-
-      const backScored = UnifiedScorer.score(analyzer, 'back', 'balanced')
-        .filter(r => effectiveBackRemaining.includes(r.number));
-      const backSelected = backScored.slice(0, plan.backPool).map(r => r.number).sort((a, b) => a - b);
-
-      setFushiFrontSelected(frontSelected);
-      setFushiBackSelected(backSelected);
+      const result = FushiSelector.select(analyzer, effectiveFrontRemaining, effectiveBackRemaining, plan, 'balanced');
+      setFushiFrontSelected(result.frontSelected);
+      setFushiBackSelected(result.backSelected);
     } catch (error) {
-      console.warn('UnifiedScorer选号失败，降级到原算法:', error);
-      const autoResult = NumberEliminator.autoSelect(analyzer, effectiveFrontRemaining, effectiveBackRemaining, plan);
-      setFushiFrontSelected(autoResult.frontSelected);
-      setFushiBackSelected(autoResult.backSelected);
+      console.warn('FushiSelector选号失败，降级到UnifiedScorer:', error);
+      try {
+        const frontScored = UnifiedScorer.score(analyzer, 'front', 'balanced')
+          .filter(r => effectiveFrontRemaining.includes(r.number));
+        const frontSelected = frontScored.slice(0, plan.frontPool).map(r => r.number).sort((a, b) => a - b);
+        const backScored = UnifiedScorer.score(analyzer, 'back', 'balanced')
+          .filter(r => effectiveBackRemaining.includes(r.number));
+        const backSelected = backScored.slice(0, plan.backPool).map(r => r.number).sort((a, b) => a - b);
+        setFushiFrontSelected(frontSelected);
+        setFushiBackSelected(backSelected);
+      } catch (err2) {
+        const autoResult = NumberEliminator.autoSelect(analyzer, effectiveFrontRemaining, effectiveBackRemaining, plan);
+        setFushiFrontSelected(autoResult.frontSelected);
+        setFushiBackSelected(autoResult.backSelected);
+      }
     }
   };
 
@@ -232,7 +264,7 @@ export default function FushiPlay({ analyzer }) {
       {/* 高级设置 - 可折叠 */}
       <div style={{ marginBottom: '15px' }}>
         <button onClick={() => setShowAdvanced(!showAdvanced)}
-          style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #aaa', background: '#f5f5f5', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85em', width: '100%' }}>
+          style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #aaa', background: '#f5f5f5', color: '#555', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85em', width: '100%' }}>
           {showAdvanced ? '收起高级设置' : '展开高级设置（杀号参数配置）'}
         </button>
         {showAdvanced && (
@@ -310,8 +342,30 @@ export default function FushiPlay({ analyzer }) {
         </button>
         <button onClick={() => handleBacktest(currentMode)}
           style={{ flex: '0 0 100px', background: 'linear-gradient(135deg, #17a2b8, #138496)', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
-          回测验证
+          杀号回测
         </button>
+        <div style={{ flex: '0 0 150px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', gap: '3px' }}>
+            {['8+3', '10+5', '15+5'].map(k => (
+              <button key={k} onClick={() => setFushiBtPlanKey(k)} disabled={fushiBacktestLoading}
+                style={{ flex: 1, padding: '4px', fontSize: '11px', borderRadius: '4px', border: fushiBtPlanKey === k ? '2px solid #5a4bd1' : '1px solid #ccc', background: fushiBtPlanKey === k ? '#6c5ce7' : '#fff', color: fushiBtPlanKey === k ? '#fff' : '#5a4bd1', cursor: 'pointer', fontWeight: 'bold' }}>
+                {k}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '3px' }}>
+            {[20, 50, 100].map(p => (
+              <button key={p} onClick={() => setFushiBtPeriods(p)} disabled={fushiBacktestLoading}
+                style={{ flex: 1, padding: '4px', fontSize: '11px', borderRadius: '4px', border: fushiBtPeriods === p ? '2px solid #5a4bd1' : '1px solid #ccc', background: fushiBtPeriods === p ? '#6c5ce7' : '#fff', color: fushiBtPeriods === p ? '#fff' : '#5a4bd1', cursor: 'pointer', fontWeight: 'bold' }}>
+                {p}期
+              </button>
+            ))}
+          </div>
+          <button onClick={() => handleFushiBacktest()} disabled={fushiBacktestLoading}
+            style={{ background: 'linear-gradient(135deg, #6c5ce7, #5a4bd1)', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', cursor: fushiBacktestLoading ? 'wait' : 'pointer', fontWeight: 'bold', fontSize: '13px', opacity: fushiBacktestLoading ? 0.7 : 1 }}>
+            {fushiBacktestLoading ? '回测中...' : `选号命中率回测(${fushiBtPlanKey},${fushiBtPeriods}期)`}
+          </button>
+        </div>
       </div>
 
       {/* 回测结果 */}
@@ -349,9 +403,101 @@ export default function FushiPlay({ analyzer }) {
         </div>
       )}
 
+      {/* 选号命中率回测结果（端到端：杀号+选号→对比开奖号） */}
+      {fushiBacktestResult && fushiBacktestResult.success && (
+        <div style={{ marginTop: '15px', padding: '15px', background: 'linear-gradient(135deg, #ede7f6, #d1c4e9)', borderRadius: '8px', border: '1px solid #6c5ce7' }}>
+          <div style={{ fontWeight: 'bold', color: '#5a4bd1', marginBottom: '10px' }}>选号命中率回测（{fushiBacktestResult.plan.key}套餐 · 端到端）</div>
+          <div style={{ fontSize: '0.85em', color: '#333', marginBottom: '8px' }}>{fushiBacktestResult.summary}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '10px', marginBottom: '10px' }}>
+            <div style={{ textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ccc' }}>
+              <div style={{ fontSize: '0.8em' }}>前区池命中</div>
+              <div style={{ fontWeight: 'bold', color: '#27ae60', fontSize: '1.3em' }}>{fushiBacktestResult.avgFrontHits.toFixed(2)}/5</div>
+              <div style={{ fontSize: '0.7em', color: '#888' }}>随机{fushiBacktestResult.randomFrontExpect.toFixed(2)}</div>
+            </div>
+            <div style={{ textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ccc' }}>
+              <div style={{ fontSize: '0.8em' }}>后区池命中</div>
+              <div style={{ fontWeight: 'bold', color: '#27ae60', fontSize: '1.3em' }}>{fushiBacktestResult.avgBackHits.toFixed(2)}/2</div>
+              <div style={{ fontSize: '0.7em', color: '#888' }}>随机{fushiBacktestResult.randomBackExpect.toFixed(2)}</div>
+            </div>
+            <div style={{ textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ccc' }}>
+              <div style={{ fontSize: '0.8em' }}>前区全中率</div>
+              <div style={{ fontWeight: 'bold', color: '#6c5ce7', fontSize: '1.3em' }}>{(fushiBacktestResult.frontAllHitRate * 100).toFixed(1)}%</div>
+            </div>
+            <div style={{ textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ccc' }}>
+              <div style={{ fontSize: '0.8em' }}>后区全中率</div>
+              <div style={{ fontWeight: 'bold', color: '#6c5ce7', fontSize: '1.3em' }}>{(fushiBacktestResult.backAllHitRate * 100).toFixed(1)}%</div>
+            </div>
+            <div style={{ textAlign: 'center', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #ccc' }}>
+              <div style={{ fontSize: '0.8em' }}>前区误杀</div>
+              <div style={{ fontWeight: 'bold', color: '#e74c3c', fontSize: '1.1em' }}>{fushiBacktestResult.avgFrontWrongKill.toFixed(2)}个/期</div>
+            </div>
+          </div>
+          <div style={{ fontSize: '0.8em', color: '#333', marginBottom: '4px' }}>最近5期明细（开奖号 vs 选号池命中）:</div>
+          {fushiBacktestResult.details.slice(-5).reverse().map((detail, idx) => (
+            <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid #ccc', fontSize: '0.75em', display: 'flex', justifyContent: 'space-between' }}>
+              <div>第{detail.periodIndex}期: 开奖 [{detail.actualDraw.front.join(' ')} + {detail.actualDraw.back.join(' ')}]</div>
+              <div style={{ color: detail.frontHits >= 4 ? '#27ae60' : detail.frontHits >= 3 ? '#f39c12' : '#e74c3c' }}>
+                前区{detail.frontHits}/5 后区{detail.backHits}/2
+              </div>
+            </div>
+          ))}
+          <div style={{ fontSize: '0.75em', color: '#666', marginTop: '6px' }}>说明：前区池命中=开奖5个号中有几个落在选号池内；全中率=5个全在池内的期数占比。对比"随机"基线可看出算法增益。</div>
+        </div>
+      )}
+
+      {/* 手动杀号（独立，不依赖算法杀号，可直接操作） */}
+      <div style={{ marginTop: '12px', padding: '10px', background: '#fff0f0', borderRadius: '8px', border: '1px solid #ffcccc' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <div style={{ fontWeight: 'bold', color: '#c0392b' }}>✋ 手动杀号（点击号码添加/取消，无需先执行算法杀号）</div>
+          {(manualFrontKill.length > 0 || manualBackKill.length > 0) && (
+            <button onClick={clearManualKill}
+              style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #e74c3c', background: '#fff', color: '#e74c3c', cursor: 'pointer', fontSize: '0.8em' }}>
+              清空手动杀号
+            </button>
+          )}
+        </div>
+        <p style={{ fontSize: '0.8em', color: '#555', marginBottom: '8px' }}>直接选择要杀掉的号码，算法推荐时自动排除。有效剩余：前区{effectiveFrontRemaining.length}个 / 后区{effectiveBackRemaining.length}个</p>
+
+        {/* 前区手动杀号 - 显示全部35个号 */}
+        <div style={{ marginBottom: '10px' }}>
+          <div style={{ fontSize: '0.85em', marginBottom: '4px', color: '#e74c3c' }}>前区(红) — 已手动杀{manualFrontKill.length}个{algoFrontKilled.length > 0 && `，算法杀${algoFrontKilled.length}个（灰色不可点）`}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            {allFront.map(num => {
+              const isManualKilled = manualFrontKill.includes(num);
+              const isAlgoKilled = algoFrontKilled.includes(num);
+              return (
+                <button key={num} onClick={() => !isAlgoKilled && toggleManualFrontKill(num)} disabled={isAlgoKilled}
+                  style={{ width: '32px', height: '32px', borderRadius: '6px', border: isManualKilled ? '2px solid #e74c3c' : isAlgoKilled ? '1px solid #bbb' : '1px solid #ddd', background: isManualKilled ? 'rgba(231,76,60,0.25)' : isAlgoKilled ? '#e0e0e0' : '#fff', color: isManualKilled ? '#e74c3c' : isAlgoKilled ? '#888' : '#333', fontSize: '0.8em', fontWeight: isManualKilled ? 'bold' : 'normal', cursor: isAlgoKilled ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', textDecoration: isAlgoKilled ? 'line-through' : 'none' }}>
+                  {num.toString().padStart(2, '0')}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 后区手动杀号 - 显示全部12个号 */}
+        <div>
+          <div style={{ fontSize: '0.85em', marginBottom: '4px', color: '#3498db' }}>后区(蓝) — 已手动杀{manualBackKill.length}个{algoBackKilled.length > 0 && `，算法杀${algoBackKilled.length}个（灰色不可点）`}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            {allBack.map(num => {
+              const isManualKilled = manualBackKill.includes(num);
+              const isAlgoKilled = algoBackKilled.includes(num);
+              return (
+                <button key={num} onClick={() => !isAlgoKilled && toggleManualBackKill(num)} disabled={isAlgoKilled}
+                  style={{ width: '32px', height: '32px', borderRadius: '6px', border: isManualKilled ? '2px solid #e74c3c' : isAlgoKilled ? '1px solid #bbb' : '1px solid #ddd', background: isManualKilled ? 'rgba(231,76,60,0.25)' : isAlgoKilled ? '#e0e0e0' : '#fff', color: isManualKilled ? '#e74c3c' : isAlgoKilled ? '#888' : '#333', fontSize: '0.8em', fontWeight: isManualKilled ? 'bold' : 'normal', cursor: isAlgoKilled ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', textDecoration: isAlgoKilled ? 'line-through' : 'none' }}>
+                  {num.toString().padStart(2, '0')}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       {/* 杀号结果 */}
-      {eliminationResult && (
+      {(effectiveFrontRemaining.length > 0 || eliminationResult) && (
         <div className="elimination-result">
+          {eliminationResult && (
+            <>
           <div className="elimination-summary" style={{ padding: '10px', background: '#e3f2fd', borderRadius: '6px', marginBottom: '12px', fontSize: '0.9em', fontWeight: '500', color: '#333' }}>
             {eliminationResult.summary}
           </div>
@@ -406,52 +552,7 @@ export default function FushiPlay({ analyzer }) {
               </div>
             </div>
           </div>
-
-          {/* 手动杀号 */}
-          <div style={{ marginTop: '12px', padding: '10px', background: '#fff0f0', borderRadius: '8px', border: '1px solid #ffcccc' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <div style={{ fontWeight: 'bold', color: '#c0392b' }}>✋ 手动杀号（点击号码添加/取消）</div>
-              {(manualFrontKill.length > 0 || manualBackKill.length > 0) && (
-                <button onClick={clearManualKill}
-                  style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #e74c3c', background: '#fff', color: '#e74c3c', cursor: 'pointer', fontSize: '0.8em' }}>
-                  清空手动杀号
-                </button>
-              )}
-            </div>
-            <p style={{ fontSize: '0.8em', color: '#555', marginBottom: '8px' }}>在算法杀号基础上，可自行补充需要杀掉的号码。有效剩余：前区{effectiveFrontRemaining.length}个 / 后区{effectiveBackRemaining.length}个</p>
-
-            {/* 前区手动杀号 */}
-            <div style={{ marginBottom: '10px' }}>
-              <div style={{ fontSize: '0.85em', marginBottom: '4px', color: '#e74c3c' }}>前区(红) — 剩余{eliminationResult.frontRemaining.length}个，已手动杀{manualFrontKill.length}个</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                {eliminationResult.frontRemaining.map(num => {
-                  const isManualKilled = manualFrontKill.includes(num);
-                  return (
-                    <button key={num} onClick={() => toggleManualFrontKill(num)}
-                      style={{ width: '32px', height: '32px', borderRadius: '6px', border: isManualKilled ? '2px solid #e74c3c' : '1px solid #ddd', background: isManualKilled ? 'rgba(231,76,60,0.25)' : '#fff', color: isManualKilled ? '#e74c3c' : '#333', fontSize: '0.8em', fontWeight: isManualKilled ? 'bold' : 'normal', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
-                      {num.toString().padStart(2, '0')}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 后区手动杀号 */}
-            <div>
-              <div style={{ fontSize: '0.85em', marginBottom: '4px', color: '#3498db' }}>后区(蓝) — 剩余{eliminationResult.backRemaining.length}个，已手动杀{manualBackKill.length}个</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                {eliminationResult.backRemaining.map(num => {
-                  const isManualKilled = manualBackKill.includes(num);
-                  return (
-                    <button key={num} onClick={() => toggleManualBackKill(num)}
-                      style={{ width: '32px', height: '32px', borderRadius: '6px', border: isManualKilled ? '2px solid #e74c3c' : '1px solid #ddd', background: isManualKilled ? 'rgba(231,76,60,0.25)' : '#fff', color: isManualKilled ? '#e74c3c' : '#333', fontSize: '0.8em', fontWeight: isManualKilled ? 'bold' : 'normal', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
-                      {num.toString().padStart(2, '0')}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          </>)}
 
           {/* 套餐选择 */}
           <div className="fushi-plan-selector" style={{ marginTop: '12px' }}>
@@ -466,7 +567,7 @@ export default function FushiPlay({ analyzer }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px', marginBottom: '12px' }}>
               {NumberEliminator.FUSHI_PLANS.map(plan => {
                 const bets = NumberEliminator.calcPlanBets(plan);
-                const canSelect = eliminationResult && effectiveFrontRemaining.length >= plan.frontPool && effectiveBackRemaining.length >= plan.backPool;
+                const canSelect = effectiveFrontRemaining.length >= plan.frontPool && effectiveBackRemaining.length >= plan.backPool;
                 const isActive = selectedPlan && selectedPlan.key === plan.key;
                 // 视觉分级：小套餐(≤6)绿色系、中套餐(7)蓝色系、大套餐(≥8)橙红色系
                 const colors = plan.frontPool <= 6
@@ -477,10 +578,10 @@ export default function FushiPlay({ analyzer }) {
                 return (
                   <button key={plan.key} onClick={() => canSelect && handleSelectPlan(plan)} disabled={!canSelect}
                     className={`fushi-plan-btn ${isActive ? 'active' : ''} ${!canSelect ? 'disabled' : ''}`}
-                    style={{ padding: '12px 8px', borderRadius: '10px', border: isActive ? `3px solid ${colors.activeBorder}` : `2px solid ${colors.border}`, background: !canSelect ? '#f5f5f5' : isActive ? colors.activeBg : colors.bg, color: !canSelect ? '#ccc' : isActive ? colors.activeText : colors.text, cursor: canSelect ? 'pointer' : 'not-allowed', fontWeight: isActive ? 'bold' : 'normal', textAlign: 'center', transition: 'all 0.3s', transform: isActive ? 'scale(1.05)' : 'scale(1)' }}>
+                    style={{ padding: '12px 8px', borderRadius: '10px', border: isActive ? `3px solid ${colors.activeBorder}` : `2px solid ${colors.border}`, background: !canSelect ? '#e0e0e0' : isActive ? colors.activeBg : colors.bg, color: !canSelect ? '#888' : isActive ? colors.activeText : colors.text, cursor: canSelect ? 'pointer' : 'not-allowed', fontWeight: isActive ? 'bold' : 'normal', textAlign: 'center', transition: 'all 0.3s', transform: isActive ? 'scale(1.05)' : 'scale(1)' }}>
                     <div style={{ fontSize: '1.3em', fontWeight: 'bold', marginBottom: '4px' }}>{plan.key}</div>
                     <div style={{ fontSize: '0.75em' }}><div>{bets.totalBets}注</div><div style={{ fontWeight: 'bold', fontSize: '1.1em' }}>{bets.cost}元</div></div>
-                    {!canSelect && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-45deg)', fontSize: '0.8em', color: '#555', fontWeight: 'bold', whiteSpace: 'nowrap' }}>号码不足</div>}
+                    {!canSelect && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-45deg)', fontSize: '0.8em', color: '#666', fontWeight: 'bold', whiteSpace: 'nowrap' }}>号码不足</div>}
                   </button>
                 );
               })}
@@ -491,17 +592,21 @@ export default function FushiPlay({ analyzer }) {
           {selectedPlan && fushiFrontSelected.length > 0 && (
             <div className="fushi-auto-select" style={{ marginTop: '12px', padding: '10px', background: '#e8f5e9', borderRadius: '6px' }}>
               <div style={{ fontWeight: 'bold', marginBottom: '6px', color: '#2e7d32' }}>{selectedPlan.key}套餐 - 自动选号结果</div>
-              <div style={{ fontSize: '0.85em', marginBottom: '6px' }}>
-                <span style={{ color: '#e74c3c' }}>前区算法杀号({eliminationResult.frontEliminated.length}个):</span> {eliminationResult.frontEliminated.map(n => n.toString().padStart(2, '0')).join(', ')}
-              </div>
+              {eliminationResult && (
+                <div style={{ fontSize: '0.85em', marginBottom: '6px' }}>
+                  <span style={{ color: '#e74c3c' }}>前区算法杀号({eliminationResult.frontEliminated.length}个):</span> {eliminationResult.frontEliminated.map(n => n.toString().padStart(2, '0')).join(', ')}
+                </div>
+              )}
               {manualFrontKill.length > 0 && (
                 <div style={{ fontSize: '0.85em', marginBottom: '6px' }}>
                   <span style={{ color: '#e74c3c' }}>前区手动杀号({manualFrontKill.length}个):</span> {manualFrontKill.slice().sort((a, b) => a - b).map(n => n.toString().padStart(2, '0')).join(', ')}
                 </div>
               )}
-              <div style={{ fontSize: '0.85em', marginBottom: '6px' }}>
-                <span style={{ color: '#e74c3c' }}>后区算法杀号({eliminationResult.backEliminated.length}个):</span> {eliminationResult.backEliminated.map(n => n.toString().padStart(2, '0')).join(', ')}
-              </div>
+              {eliminationResult && (
+                <div style={{ fontSize: '0.85em', marginBottom: '6px' }}>
+                  <span style={{ color: '#e74c3c' }}>后区算法杀号({eliminationResult.backEliminated.length}个):</span> {eliminationResult.backEliminated.map(n => n.toString().padStart(2, '0')).join(', ')}
+                </div>
+              )}
               {manualBackKill.length > 0 && (
                 <div style={{ fontSize: '0.85em', marginBottom: '6px' }}>
                   <span style={{ color: '#e74c3c' }}>后区手动杀号({manualBackKill.length}个):</span> {manualBackKill.slice().sort((a, b) => a - b).map(n => n.toString().padStart(2, '0')).join(', ')}
@@ -519,7 +624,35 @@ export default function FushiPlay({ analyzer }) {
                   {fushiBackSelected.map(num => <span key={num} style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(52,152,219,0.15)', border: '1px solid #3498db', color: '#2980b9', fontWeight: 'bold', fontSize: '0.9em' }}>{num.toString().padStart(2, '0')}</span>)}
                 </div>
               </div>
-              <div style={{ fontSize: '0.8em', color: '#444', marginTop: '6px' }}>注：选号基于UnifiedScorer统一评分（频率+遗漏+趋势+区间+条件概率）自动选取最优号码</div>
+              {/* 012路分布分析 */}
+              <div style={{ marginTop: '8px', padding: '8px', background: '#f0f4c8', borderRadius: '6px', border: '1px solid #cddc39' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '0.85em', color: '#558b2f', marginBottom: '4px' }}>📊 012路分布分析</div>
+                <div style={{ fontSize: '0.8em', color: '#333' }}>
+                  <div style={{ marginBottom: '4px' }}>
+                    <span style={{ color: '#e74c3c', fontWeight: 'bold' }}>前区: </span>
+                    {[0, 1, 2].map(r => {
+                      const nums = fushiFrontSelected.filter(n => n % 3 === r);
+                      return (
+                        <span key={r} style={{ marginRight: '8px' }}>
+                          {r}路({nums.length}个): {nums.length > 0 ? nums.map(n => n.toString().padStart(2, '0')).join(' ') : '无'}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <div>
+                    <span style={{ color: '#3498db', fontWeight: 'bold' }}>后区: </span>
+                    {[0, 1, 2].map(r => {
+                      const nums = fushiBackSelected.filter(n => n % 3 === r);
+                      return (
+                        <span key={r} style={{ marginRight: '8px' }}>
+                          {r}路({nums.length}个): {nums.length > 0 ? nums.map(n => n.toString().padStart(2, '0')).join(' ') : '无'}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: '0.8em', color: '#444', marginTop: '6px' }}>注：选号基于UnifiedScorer 6维评分（频率+遗漏+趋势+区间+条件概率+和值回归）+ FushiSelector结构优化（区间覆盖+冷热搭配+012路平衡）自动选取最优号码</div>
             </div>
           )}
 

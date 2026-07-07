@@ -25,11 +25,16 @@ export class UnifiedScorer {
   /**
    * 策略权重配置
    * 每个维度的权重，总和不需要为1，会在内部归一化
+   *
+   * 权重调整依据（条件概率回测显示其预测力≈随机甚至更低）：
+   * - correlation 大幅降权（前区预测力≈随机，后区<随机）
+   * - 新增 sumRegression 和值回归维度（统计规律可靠，FrontDanOptimizer 已验证）
+   * - 释放的权重分配给 frequency/omission 等有效维度
    */
   static STRATEGY_WEIGHTS = {
-    hot:          { frequency: 3.0, omission: 0.5, momentum: 2.5, zone: 1.0, correlation: 1.0 },
-    balanced:     { frequency: 1.5, omission: 1.5, momentum: 1.5, zone: 1.5, correlation: 1.5 },
-    conservative: { frequency: 0.8, omission: 3.0, momentum: 0.5, zone: 2.0, correlation: 1.0 },
+    hot:          { frequency: 3.0, omission: 0.5, momentum: 2.5, zone: 1.2, correlation: 0.5, sumRegression: 1.0 },
+    balanced:     { frequency: 2.0, omission: 2.0, momentum: 1.5, zone: 1.5, correlation: 0.5, sumRegression: 1.5 },
+    conservative: { frequency: 1.0, omission: 3.0, momentum: 0.5, zone: 2.0, correlation: 0.3, sumRegression: 1.2 },
   };
 
   /**
@@ -49,6 +54,7 @@ export class UnifiedScorer {
     const momentumScores = UnifiedScorer._calcMomentumScore(analyzer, area);
     const zoneScores = UnifiedScorer._calcZoneScore(analyzer, area);
     const corrScores = UnifiedScorer._calcCorrelationScore(analyzer, area);
+    const sumRegScores = UnifiedScorer._calcSumRegressionScore(analyzer, area);
 
     // 归一化每个维度到0-100
     const norm = (obj) => {
@@ -68,6 +74,7 @@ export class UnifiedScorer {
     const normMomentum = norm(momentumScores);
     const normZone = norm(zoneScores);
     const normCorr = norm(corrScores);
+    const normSumReg = norm(sumRegScores);
 
     // 策略权重
     const weights = UnifiedScorer.STRATEGY_WEIGHTS[strategy] || UnifiedScorer.STRATEGY_WEIGHTS.hot;
@@ -81,6 +88,7 @@ export class UnifiedScorer {
         momentum: normMomentum[num] || 0,
         zone: normZone[num] || 0,
         correlation: normCorr[num] || 0,
+        sumRegression: normSumReg[num] || 0,
       };
 
       const totalScore = (
@@ -88,7 +96,8 @@ export class UnifiedScorer {
         dimensionScores.omission * weights.omission +
         dimensionScores.momentum * weights.momentum +
         dimensionScores.zone * weights.zone +
-        dimensionScores.correlation * weights.correlation
+        dimensionScores.correlation * weights.correlation +
+        dimensionScores.sumRegression * (weights.sumRegression || 0)
       ) / weightSum;
 
       return {
@@ -316,6 +325,9 @@ export class UnifiedScorer {
   /**
    * 维度5: 条件概率+关联性
    * 基于马尔可夫转移矩阵，给定上期开奖号码后下期各号码出现概率
+   *
+   * 回测显示：前区条件概率预测力≈随机，后区<随机（负增益）
+   * 因此对后区额外降权，避免负信号污染选号
    */
   static _calcCorrelationScore(analyzer, area) {
     const range = area === 'front' ? CONFIG.FRONT_RANGE : CONFIG.BACK_RANGE;
@@ -323,10 +335,67 @@ export class UnifiedScorer {
     const areaProb = condProb[area] || {};
     const confidence = condProb.confidence || 0;
 
+    // 后区条件概率回测命中率低于随机基线，额外降权至0.3
+    const areaMultiplier = area === 'back' ? 0.3 : 1.0;
+
     const scores = {};
     for (let i = 1; i <= range; i++) {
-      // 条件概率 * 置信度
-      scores[i] = (areaProb[i] || areaProb[String(i)] || 0) * confidence;
+      // 条件概率 * 置信度 * 区域系数
+      scores[i] = (areaProb[i] || areaProb[String(i)] || 0) * confidence * areaMultiplier;
+    }
+    return scores;
+  }
+
+  /**
+   * 维度6: 和值趋势回归
+   * 统计规律：和值会向均值回归。近期和值偏离时，反向号码加分。
+   * - 近期和值偏高 → 偏小号码加分（拉低和值）
+   * - 近期和值偏低 → 偏大号码加分（拉高和值）
+   * 参考 FrontDanOptimizer 已回测验证的和值回归逻辑
+   */
+  static _calcSumRegressionScore(analyzer, area) {
+    const range = area === 'front' ? CONFIG.FRONT_RANGE : CONFIG.BACK_RANGE;
+    let sumTrend;
+    try {
+      sumTrend = analyzer.trendAnalyzer.analyzeSumTrend();
+    } catch (e) {
+      const scores = {};
+      for (let i = 1; i <= range; i++) scores[i] = 50;
+      return scores;
+    }
+
+    const count = area === 'front' ? CONFIG.FRONT_COUNT : CONFIG.BACK_COUNT;
+    const avgSum = area === 'front' ? (sumTrend.avgFrontSum || 90) : (sumTrend.avgBackSum || 13);
+    const recentSums = area === 'front' ? (sumTrend.recentFrontSums || []) : (sumTrend.recentBackSums || []);
+    const idealPerNum = avgSum / count;
+
+    const recent5 = recentSums.slice(-5);
+    const recent5Avg = recent5.length > 0 ? recent5.reduce((a, b) => a + b, 0) / recent5.length : avgSum;
+    const sumBias = recent5Avg - avgSum;
+
+    const scores = {};
+    if (Math.abs(sumBias) <= 5) {
+      // 和值趋势平稳，给中性分（归一化后不产生差异）
+      for (let i = 1; i <= range; i++) scores[i] = 50;
+      return scores;
+    }
+
+    const normalizedBias = Math.min(Math.abs(sumBias) / 15, 1);
+    for (let i = 1; i <= range; i++) {
+      let score = 50;
+      if (sumBias > 0 && i < idealPerNum) {
+        // 近期偏高 → 偏小号加分
+        const deviation = (idealPerNum - i) / idealPerNum;
+        score = 50 + normalizedBias * Math.min(deviation * 50, 40);
+      } else if (sumBias < 0 && i > idealPerNum) {
+        // 近期偏低 → 偏大号加分
+        const deviation = (i - idealPerNum) / idealPerNum;
+        score = 50 + normalizedBias * Math.min(deviation * 50, 40);
+      } else {
+        // 与回归方向相反，轻微降分
+        score = 50 - normalizedBias * 10;
+      }
+      scores[i] = score;
     }
     return scores;
   }
